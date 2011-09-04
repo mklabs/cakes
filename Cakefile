@@ -72,6 +72,20 @@ error = (err) ->
   process.exit 1
 
 
+# ### docs
+# Generates the source documentation of this cake script
+task 'docs', 'Generates the source documentation of this cake script', (options, em) ->
+  commands = [
+    "docco conf/** Cakefile helper.cofee"
+  ]
+
+  exec 'docco conf/*.coffee && cp -rf docs documentation && rm -r docs', (err, stdout) ->
+    return error err if err
+
+    em.emit 'log', 'generated documentation for conf/*.cofee Cakefile and helper.cofee'
+    em.emit 'end'
+
+
 # ### createproject
 #
 # Generate a new project from your HTML5 Boilerplate repo clone
