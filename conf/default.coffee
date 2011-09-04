@@ -15,7 +15,7 @@ scripts.compilation = {}
 images.strip = {}
 
 
-dir.source          = "html5-boilerplate"
+dir.source          = "testproject"
 dir.intermediate    = "intermediate"
 dir.publish         = "publish"
 dir.build           = "build"

@@ -10,6 +10,7 @@ glob            = require 'glob'
 path            = require 'path'
 fs              = require 'fs'
 findit          = require 'findit'
+crypto          = require 'crypto'
 
 # regex used to split include and excludes pattern
 rsplit = /\s|,\s/
@@ -41,6 +42,12 @@ exports.fileset = (include, exclude, callback) ->
   match = 
     includes: []
     excludes: []
+
+  # handle no exclude case
+  if !callback and typeof exclude is 'function'
+    callback = exclude
+    exclude = ""
+
   includes = include.split(rsplit).filter((it) -> it) or []
   excludes = exclude.split(rsplit).filter((it) -> it) or []
   exludesLength = excludes.length
@@ -50,7 +57,7 @@ exports.fileset = (include, exclude, callback) ->
     if err
       callback err if callback
       return em.emit 'error', err
-    
+
     match.includes = results
     em.emit 'include', results
 
@@ -127,4 +134,46 @@ globs = (patterns, em, callback) ->
           callback null, matches if --remaining is 0
 
 
+
+
+# ## concat
+# ease the concatenation process by taking a list of absolute path, and returning
+# an array of Buffers. There is no order management yet.
+exports.concat = (files, callback) ->
+  return callback new Error('concat: Files array is empty') unless files.length
+
+  output = []
+  remaining = files.length
+  onFile = (err, body) ->
+    return callback err if err
+    output.push body
+    callback null, output if --remaining is 0
+
+  fs.readFile file, onFile for file in files
+
+# ## checksum
+# Simple checksum helper, takes an absolute path, open a fileStream,
+# and generates back the according `md5` hash, `hex` encoded.
+exports.checksum = (file, callback) ->
+  md5 = crypto.createHash 'md5'
+  fs.createReadStream(file)
+    .on('error', -> callback err)
+    .on('data', (data) -> md5.update data)
+    .on('end', () -> callback null, md5.digest('hex'))
+
+
+
+# ## copy
+#
+# Takes two path parameters: from and to, opens a ReadStream on from, a WriteStream on to,
+# and pipes the ReadStream to the WriteStream. **files must exists**
+#
+exports.copy = (from, to, callback) ->
+  fstream = fs.createReadStream(from)
+  wstream = fs.createWriteStream(to)
+
+  fstream.pipe wstream
+  fstream
+    .on('end', -> callback null )
+    .on('error', (err) -> callback err)
 

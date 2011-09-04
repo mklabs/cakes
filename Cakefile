@@ -40,21 +40,18 @@ gem = new EventEmitter
 
 # ### task monkey-patch
 #
-# to provide a tasks-scopped EventEmitter which tasks could work with to enable some async stuff and task ordering
+# to provide a tasks-scopped EventEmitter to enable some async stuff and task ordering
 #
 _task = global.task
 task = (name, description, action) ->
 
+  description = description.grey
   _task name, description, (options) -> 
-    em = new EventEmitter
-    gem.emit "start:#{@.name}", options
-
-    em
-      .on('error', (err) -> error err)
-      .on('log', console.log.bind console, "#{name} » ".magenta)
-      .on('start', (options) -> console.log name.magenta, description.grey)
+    em = new EventEmitter()
+      .on('error', (err) -> console.log 'error occured'.red.bold; error err)
+      .on('log', console.log.bind console, "  #{name} » ".magenta)
       .on('end', (results) ->
-        console.log "end:#{name}".cyan
+        console.log "✔ end:#{name}".green
         gem.emit "end:#{name}", results
       )
 
@@ -67,9 +64,9 @@ task = (name, description, action) ->
 #
 #     return error new Error(':((') if err
 error = (err) ->
-  gem.emit 'error', err
   console.error '  ✗ '.red + err.message.red
   process.exit 1
+
 
 
 # ### docs
@@ -77,6 +74,7 @@ error = (err) ->
 task 'docs', 'Generates the source documentation of this cake script', (options, em) ->
 
   commands = [
+    "rm -rf documentation"
     "cp Cakefile Cakefile.coffee"
     "docco conf/*.coffee *.coffee"
     "cp -r docs documentation"
@@ -208,7 +206,7 @@ task 'mkdirs', 'Create the directory structure', (options, em) ->
     helper.fileset(".", [file.default.exclude, file.exclude].join(' '))
       .on('error', console.error.bind(console))
       .on('end', (files) ->
-        em.emit 'log', "Copying #{files.length} files over to #{dir.intermediate} and #{dir.publish}".grey
+        em.emit 'log', "Copying #{files.length} files over to #{dir.intermediate} and #{dir.publish} from #{dir.source}".grey
         destinations = [dir.intermediate, dir.publish]
         remaining = files.length * destinations.length
         for to in destinations then do (to) ->
@@ -277,6 +275,9 @@ task 'js.mylibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options,
       return error err if err
 
       output = []
+
+      return concat(output) unless files.length
+
       remaining = files.length
       for file in files then do(file) ->
         fs.readFile file, (err, body) ->
@@ -289,11 +290,57 @@ task 'js.mylibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options,
 #
 # Concatenating library file with main script file
 #
+# Calculates an md5 checksum, prefix the script name, and copy over to `#{dir.publish}/#{dir.js}/`
+#
+#     publish/js/e816baa.scripts-concat.min.js
+#
 task 'js.scripts.concat', 'Concatenating library file with main script file', (options, em) ->
-  # depends js.main.concat, js.mylibs.concat
   invoke 'js.all.minify'
   invoke 'js.main.concat'
   invoke 'js.mylibs.concat'
+
+  emit = (source) ->
+    emit.remaining = emit.remaining or= 0
+    emit.remaining++
+    return (args...) ->
+      return if --emit.remaining
+      process.chdir base
+      helper.fileset "#{dir.intermediate}/#{dir.js}/**-concat.js", (err, files) ->
+        return error err if err
+        em.emit 'log', 'Concatenating library file with main script file'.grey
+        helper.concat files, (err, buffers) ->
+          return error err if err
+
+          em.emit 'log', "Writing to #{dir.intermediate}/#{dir.js}/scripts-concat.min.js".grey
+
+          filename = "scripts-concat.min.js"
+          from = "#{dir.intermediate}/#{dir.js}/#{filename}"
+          output = buffers.map (buffer) ->
+            return buffer.toString()
+
+          fs.writeFile from, output.join('\n\n'), (err) ->
+            return err if err
+            em.emit 'log', "File ✔ #{from}".grey
+
+            em.emit 'log', 'Calculating checksum...'.grey
+
+            helper.checksum from, (err, md5) ->
+              return error err if err
+
+              em.emit 'log', "✔ md5 is #{md5} for file #{from}"
+              # now copy over the file to #{dir.js}/#{script.sha}.js
+              md5 = md5.substring 0, hash.length
+              to = "#{dir.publish}/#{dir.js}/#{md5}.#{filename}"
+
+              em.emit 'log', "now copy over the file to #{to}"
+              return helper.copy from, to, (err) ->
+                return error err if err
+                em.emit 'log', "✔ Copy done » #{to}"
+                em.emit 'end'
+
+  gem.on('end:js.main.concat', emit('main'))
+  gem.on('end:js.mylibs.concat', emit('mylibs'))
+
 
 # ### js.mylibs.concat
 #
@@ -327,6 +374,47 @@ task 'js.all.minify', "Minifies the scripts.js files in #{dir.intermediate}/#{di
             em.emit 'end', files if --remaining is 0
 
 
+# ## jshint
+# run the `dir.js` folder through jshint with default options. Exits and reports in case of lint errors.
+#
+# Run separately
+task 'jshint', 'jshint task, run jshint on any non min.js file in dir.js', (options, em) ->
+  helper.fileset "#{dir.source}/#{dir.js}/", "**/*.min.js #{dir.source}/#{dir.js.libs}", (err, files) ->
+    return error err if err
+    exec 'jshint ' + files.join(' '), (err, stdout, stderr) -> 
+      return em.emit 'log', '  ✔ Congrats! Lint Free!'.green unless err
+
+      if err.message is 'Command failed: '
+        em.emit 'log', [
+          "jshint returns the following errors \n".grey
+          stdout.split('\n').map((line) -> return "  ✗ #{line}").join('\n').grey
+        ].join('\n')
+
+      return error err if err
+
+# ## csslint
+# run the `dir.css` folder through csslint with default options. Reports in case of lint errors.
+#
+# Run separately 
+task 'csslint', 'csslint task, run csslint on dir.css and ommit *.min.css one', (options, em) ->
+  helper.fileset "#{dir.source}/#{dir.css}/", "**/*.min.css", (err, files) ->
+    return error err if err
+    for file in files then do (file) ->
+      exec 'csslint ' + file, (err, stdout, stderr) -> 
+        return em.emit 'log', "  ✔ Congrats! Lint Free! --> #{file}".green if stdout.match(/no\serrors/i)
+
+        em.emit 'log', [
+          "  ✗ csslint returns the following errors".red
+          stdout.split('\n').map((line) -> return "    #{line}").join('\n').grey
+        ].join('\n')
+
+
+# ## css optimization
+
+
+
+# ## html compression
+
 # ### usemin
 # Replaces references to non-minified scripts
 task 'usemin', 'Replaces references to non-minified scripts', (options) ->
@@ -346,3 +434,7 @@ task 'htmlbuildkit', 'Run htmlcompressor on th HTML', (options) ->
 # ### htmlcomplress
 # Replaces references to non-minified scripts,  depends usemin
 task 'htmlcompress', 'Run htmlcompressor on th HTML', (options) ->
+
+# ## img optimization
+
+
