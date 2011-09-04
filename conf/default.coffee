@@ -15,7 +15,7 @@ scripts.compilation = {}
 images.strip = {}
 
 
-dir.source          = "testproject"
+dir.source          = "_test"
 dir.intermediate    = "intermediate"
 dir.publish         = "publish"
 dir.build           = "build"
