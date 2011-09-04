@@ -75,14 +75,18 @@ error = (err) ->
 # ### docs
 # Generates the source documentation of this cake script
 task 'docs', 'Generates the source documentation of this cake script', (options, em) ->
-  commands = [
-    "docco conf/** Cakefile helper.cofee"
-  ]
 
-  exec 'docco conf/*.coffee && cp -rf docs documentation && rm -r docs', (err, stdout) ->
+  commands = [
+    "cp Cakefile Cakefile.coffee"
+    "docco conf/*.coffee *.coffee"
+    "cp -r docs documentation"
+    "rm -rf docs Cakefile.coffee"
+  ].join(' && ')
+
+  exec commands, (err, stdout) ->
     return error err if err
 
-    em.emit 'log', 'generated documentation for conf/*.cofee Cakefile and helper.cofee'
+    em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey
     em.emit 'end'
 
 
