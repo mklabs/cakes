@@ -1,0 +1,23 @@
+{
+  "author": "",
+  "name": "cakes",
+  "description": "collection of cake files, mainly trying to learn this cool stuff",
+  "version": "0.0.0",
+  "repository": {
+    "url": ""
+  },
+  "engines": {
+    "node": "> 0.4"
+  },
+  "dependencies": {
+    "fileset": "0.0.x",
+    "colors": "0.5.0",
+    "prompt": "0.1.x",
+    "mkdirp": "0.0.6",
+    "uglify-js": "1.0.x"
+  },
+  "devDependencies": {
+    "coffee-script": "1.1.2",
+    "vows": "0.5.x"
+  }
+}
