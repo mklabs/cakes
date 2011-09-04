@@ -19,6 +19,7 @@ config          = require('./conf/default')
 helper          = require('./helper')
 uglify          = require 'uglify-js'
 
+base = process.cwd()
 
 # Extend a source object with the properties of another object (shallow copy).
 extend = exports.extend = (object, properties) ->
@@ -34,10 +35,16 @@ repo =
 # so that interpolation works as expected (of course, config should not redefine global variable)
 extend global, config
 
-## the event emitter used along tasks to handle some asynchronous stuff, gem for global EventEmitter
+# the event emitter used along tasks to handle some asynchronous stuff, gem for global EventEmitter
 gem = new EventEmitter
+
+# ### task monkey-patch
+#
+# to provide a tasks-scopped EventEmitter which tasks could work with to enable some async stuff and task ordering
+#
 _task = global.task
 task = (name, description, action) ->
+
   _task name, description, (options) -> 
     em = new EventEmitter
     gem.emit "start:#{@.name}", options
@@ -65,6 +72,8 @@ error = (err) ->
   process.exit 1
 
 
+# ### createproject
+#
 # Generate a new project from your HTML5 Boilerplate repo clone
 #
 # - by: Rick Waldron & Michael Cetrulo
@@ -130,8 +139,10 @@ task 'createproject', 'a simple create project task', (options) ->
           console.log "  ✔  Created Project: #{dest}".grey.bold
 
 
-# ### intro Build Script as a cake
-
+# ### intro 
+#
+# Output the intro message
+#
 task 'intro', 'Kindly inform the developer about the impending magic', (options, em) ->
   message = """
 
@@ -175,8 +186,7 @@ task 'mkdirs', 'Create the directory structure', (options, em) ->
     dangerousPath = !!~['..', '.', '/', './', '../'].indexOf(dir.publish)
     return error new Error(failmsg) if dangerousPath
 
-
-    process.chdir "#{dir.source}"
+    process.chdir path.join(__dirname, "#{dir.source}")
     helper.fileset(".", [file.default.exclude, file.exclude].join(' '))
       .on('error', console.error.bind(console))
       .on('end', (files) ->
@@ -198,41 +208,87 @@ task 'mkdirs', 'Create the directory structure', (options, em) ->
                 em.emit 'end', 'done' if --remaining is 0
       )
 
-###
-    <target name="-build.production"
-            depends="-intro,
-                     -usemin,
-                     -js.all.minify,
-                     -js.main.concat,
-                     -js.mylibs.concat,
-                     -js.scripts.concat,
-                     -css,
-                     -manifest,
-                     -htmlclean,
-                     -imagespng,
-                     -imagesjpg,
-                     -copy"/>
 
 
-###
+# ### js.main.concat
+#
+# Concatenates the JS files in dir.js. depends on js.all.minify
+task 'js.main.concat', 'Concatenates the JS files in dir.js', (options, em) ->
+  concat = (output) ->
+    output = new Buffer output.join('\n\n')
+    fs.writeFile path.join(__dirname, "#{dir.intermediate}", "#{dir.js}", 'script-concat.js'), output, (err) ->
+      return error err if err
+      em.emit 'log', 'script-concat.js just concat...'.grey
+      em.emit 'end', true
 
-task 'js.main.concat', 'Concatenates the JS files in dir.js', (options) ->
-  # depends js.all.minify
+  handle = (files) ->
+    em.emit 'log', 'Concatenating Main JS scripts...'
+
+    process.chdir path.join(__dirname, dir.intermediate)
+    helper.fileset "#{dir.js.main}/plugins.js #{dir.js.main}/#{file.root.script}", '', (err, files) ->
+      output = []
+      remaining = files.length
+      for file in files then do (file) ->
+        fs.readFile file, (err, body) ->
+          return error err if err
+          output.push body
+
+          concat(output) if --remaining is 0 
 
 
-task 'js.myibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options) ->
-  # depends js.all.minify
-task 'js.scripts.concat', 'Concatenating library file with main script file', (options) ->
+  gem.once 'end:js.all.minify', handle
+
+# ### js.mylibs.concat
+#
+# Concatenates the JS files in dir.js.mylibs. depends on js.all.minify
+#
+task 'js.mylibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options, em) ->
+
+  concat = (output) ->
+    output = new Buffer output.join('\n\n')
+    fs.writeFile path.join(__dirname, "#{dir.intermediate}", "#{dir.js.mylibs}", 'mylibs-concat.js'), output, (err) ->
+      return error err if err
+      em.emit 'log', 'mylibs-concat.js just concat...'.grey
+      em.emit 'end', true
+
+  gem.once 'end:js.all.minify', (files) ->
+    em.emit 'log', "Concatenating JS libraries in #{dir.js.mylibs}".grey
+
+    process.chdir path.join(__dirname, "#{dir.intermediate}")
+    helper.fileset "#{dir.js.mylibs}/**/*.js", "#{file.default.js.bypass}", (err, files) ->
+      return error err if err
+
+      output = []
+      remaining = files.length
+      for file in files then do(file) ->
+        fs.readFile file, (err, body) ->
+          return error err if err
+          output.push body
+          concat(output) if --remaining is 0
+
+
+# ### js.scripts.concat
+#
+# Concatenating library file with main script file
+#
+task 'js.scripts.concat', 'Concatenating library file with main script file', (options, em) ->
   # depends js.main.concat, js.mylibs.concat
+  invoke 'js.all.minify'
+  invoke 'js.main.concat'
+  invoke 'js.mylibs.concat'
+
+# ### js.mylibs.concat
+#
+# Minifies the scripts.js files in #{dir.intermediate}/#{dir.js}. depends on mkdirs
+#
 task 'js.all.minify', "Minifies the scripts.js files in #{dir.intermediate}/#{dir.js}", (options, em) ->
-  # depends mkdirs
   invoke 'mkdirs'
 
   gem.on 'end:mkdirs', (result) ->
     em.emit 'log', 'Minifying scripts'.grey
 
     dirname = path.join dir.intermediate, dir.js
-    process.chdir(path.join __dirname, dirname)
+    process.chdir path.join(__dirname, dirname)
     helper.fileset "**.js", "**.min.js", (err, files) ->
       return error err if err
 
@@ -246,60 +302,29 @@ task 'js.all.minify', "Minifies the scripts.js files in #{dir.intermediate}/#{di
           ast = pro.ast_mangle ast
           ast = pro.ast_squeeze ast
           code = new Buffer pro.gen_code(ast)
-          
-          file = file.replace(dir.intermediate, dir.publish)
+
           fs.writeFile file, new Buffer(code), (err) ->
             return error err if err
             em.emit 'log', "Uglified #{file}".grey
             em.emit 'end', files if --remaining is 0
 
 
-    ###
-    jsp = uglify.parser
-    pro = uglify.uglify
-
-    orig = 'var js = "is awasome"'
-    ast = jsp.parse orig
-    ast = pro.ast_mangle ast
-    ast = pro.ast_squeeze ast
-    code = pro.gen_code ast
-
-    console.log code
-    ###
-###
-###
-
+# ### usemin
+# Replaces references to non-minified scripts
 task 'usemin', 'Replaces references to non-minified scripts', (options) ->
-  # depends js.scripts.concat, css
+
+# ### manifest
+# Replaces references to non-minified scripts, depends js.script.concat
 task 'manifest', 'copying a fresh file.manifest to dir.intermediate', (options) ->
-  # depends usemin
 
+# ### htmlclean
+# Replaces references to non-minified scripts, depends usemin
 task 'htmlclean', 'Run htmlcompressor on th HTML', (options) ->
-  # depends usemin
 
+# ### htmlbuildkit
+# Replaces references to non-minified scripts, depends usemin
 task 'htmlbuildkit', 'Run htmlcompressor on th HTML', (options) ->
-  # depends usemin
 
+# ### htmlcomplress
+# Replaces references to non-minified scripts,  depends usemin
 task 'htmlcompress', 'Run htmlcompressor on th HTML', (options) ->
-  # depends usemin
-
-
-
-task 'colorparty', 'try it if you like fancy colors', (options) ->
-  console.log 'createproject'.cyan, "cloning #{repo.h5bp}..."
-  console.log 'createprojuct'.bold, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.italic, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.underline, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.inverse, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.yellow, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.cyan, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.white, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.magenta, "cloning #{repo.h5bp}..."
-
-  console.log 'createproject'.magenta, "cloning #{repo.h5bp}...".grey
-  console.log 'createproject'.green, "cloning #{repo.h5bp}...".rainbow
-  console.log 'createproject'.red, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.grey, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.blue, "cloning #{repo.h5bp}..."
-  console.log 'createproject'.rainbow, "cloning #{repo.h5bp}..."
-

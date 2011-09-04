@@ -9,7 +9,7 @@
 # Directory Paths
 #
 dir = exports.dir = {}; file = exports.file = {}; build = exports.build = {}; tool = exports.tool = {}; scripts = exports.script = {}; images = exports.images = {}; hash = exports.hash = {}
-file.pages = {}; file.pages.default = {}; file.default = {}; file.root = {}
+file.pages = {}; file.pages.default = {}; file.default = {}; file.root = {}; file.default.js = {}
 build.concat = {}; build.version = {}; build.scripts = {}
 scripts.compilation = {}
 images.strip = {}
@@ -22,8 +22,7 @@ dir.build           = "build"
 dir.build.tools     = "#{dir.build}/tools"
 dir.test            = "test"
 dir.demo            = "demo"
-dir.js              = "js"
-dir.js.main         = "#{dir.js}"
+dir.js              = { main: 'js', toString: -> 'js'}
 # scripts in the lib directory will only be minified, not concatenated together
 dir.js.libs         = "#{dir.js}/libs"
 dir.js.mylibs       = "#{dir.js}/mylibs"
@@ -56,7 +55,7 @@ file.default.exclude        = ".gitignore .project .settings README.markdown, RE
 #
 # Bypass Optimization for these files
 #
-# file.default.js.bypass
+file.default.js.bypass = ""
 # If set, these files will not be optimized (minifications, concatinations, image optimizations will not be applied)
 # Note: you cannot declare an empty file.default.bypass property
 
