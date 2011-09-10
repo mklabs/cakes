@@ -87,6 +87,36 @@ task 'docs', 'Generates the source documentation of this cake script', (options,
     em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey
     em.emit 'end'
 
+# Main tasks
+#
+# * combining and minifying CSS
+# * combining and minifying JS
+# * image optimization
+
+task 'js', 'Combines and minifies JS', (options, em) ->
+
+  invoke 'js.scripts.concat'
+
+  gem.on 'end:js.scripts.concat', (err) ->
+    console.log 'scripts done'.green.bold, arguments
+
+
+task 'css', 'Combines and minifies CSS', (options, em) ->
+
+  invoke 'js.css.concat'
+
+  gem.on 'js.css.concat:end', (err) ->
+    console.log 'css done'.green.bold, arguments
+
+task 'img', 'Performs img optimization', (options, em) ->
+
+  # will most likely be done by using spawning optipng on
+  # dir.img folder
+  invoke 'img.optimize'
+
+  gem.on 'img.optimize:end', (err) ->
+    console.log 'img done'.green.bold, arguments
+
 
 # ### createproject
 #
@@ -164,12 +194,12 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
 
     ====================================================================
     Welcome to the ★ HTML5 Boilerplate Build Script! ★
-     
+
     We're going to get your site all ship-shape and ready for prime time.
-     
+
     This should take somewhere between 15 seconds and a few minutes,
     mostly depending on how many images we're going to compress.
-     
+
     Feel free to come back or stay here and follow along.
     =====================================================================
   """
@@ -177,8 +207,18 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
   em.emit 'log', message.grey
   em.emit 'end', message.grey
 
+
+task 'check', 'Performs few validations upon the current repo, outputing errors if any', (options, em) ->
+  ## check few configuration values, namely dir.source
+  # Test whether or not the dir.source path exists.
+  exists = path.existsSync "#{base}/#{dir.source}"
+
+  return error new Error("#{base}/#{dir.source} does not exist, change the dir.source config or run cake createproject and enter #{dir.source} when prompted") unless exists
+
+
 task 'clean', 'Wipe the previous build', (options, em) ->
   invoke 'intro'
+  invoke 'check'
 
   em.emit 'log', 'Cleaning up previous build directory...'.grey
 
