@@ -655,11 +655,11 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
 
             em.emit 'log', "Update the HTML to reference our concatenated script file: #{scripts.js}"
             body = body.replace /<!-- scripts concatenated[\d\w\s\W]*<!-- end scripts -->/gm, ->
-              return "<script defer src=\"#{scripts.js}\"></script>"
+              return "<script defer src=\"#{dir.js}/#{scripts.js}\"></script>"
 
             em.emit 'log', "Update the HTML with the new css filename: #{style.css}"
-            body = body.replace /<link rel=["']?stylesheet["']?\shref=["']?(.*)\/style.css["']?\s*>/gm, ->
-              return "<link rel=\"stylesheet\" href=\"#{style.css}\">"
+            body = body.replace /<link rel=["']?stylesheet["']?\shref=["']?(.*)\/style.css["']?\s*>/gm, (match, prefix) ->
+              return "<link rel=\"stylesheet\" href=\"#{prefix}/#{style.css}\">"
 
             fs.writeFile page, body, (err) ->
               return error err if err
