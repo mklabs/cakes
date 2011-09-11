@@ -138,7 +138,13 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
       return unless --remaining is 0
 
       em.emit 'log', "Build done, now copy the #{dir.intermediate} folder over to #{dir.publish}"
-      exec "cp -r #{base}/#{dir.intermediate} #{base}/#{dir.publish}", (options, err) ->
+
+      commands = [
+        "cp -r #{base}/#{dir.intermediate} #{base}/#{dir.publish}",
+        "rm -rf #{base}/#{dir.intermediate}"
+      ].join(' && ')
+
+      exec commands, (options, err) ->
         return error err if err
         elapsed = (+new Date - start) / 1000
         console.log "✔ Build Script successful (#{elapsed}s). Check your #{dir.publish}/ folder".green.bold
@@ -265,7 +271,7 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
 
 
 task 'check', 'Performs few validations upon the current repo, outputing errors if any', (options, em) ->
-  ## check few configuration values, namely dir.source
+  # check few configuration values, namely dir.source
   # Test whether or not the dir.source path exists.
   exists = path.existsSync "#{base}/#{dir.source}"
 
@@ -460,8 +466,7 @@ task 'js.all.minify', "Minifies the *-concat.js files in #{dir.intermediate}/#{d
 
     dirname = path.join dir.intermediate, dir.js
     process.chdir path.join(__dirname, dirname)
-    helper.fileset "**-concat.js", (err, files) ->
-
+    helper.fileset "**-concat.min.js", (err, files) ->
       return error err if err
 
       remaining = files.length
@@ -475,7 +480,6 @@ task 'js.all.minify', "Minifies the *-concat.js files in #{dir.intermediate}/#{d
           ast = pro.ast_squeeze ast
           code = new Buffer pro.gen_code(ast)
 
-          file = file.replace(/\.js$/, '.min.js')
           fs.writeFile file, new Buffer(code), (err) ->
             return error err if err
             em.emit 'log', "Uglified #{file}".grey
@@ -543,7 +547,7 @@ task 'css.concat', 'Concat the CSS files depending on the @imports in your file.
   em.on 'copy', (from, to) ->
     em.emit 'log', 'Concatenating any @imports'
 
-    ## replace imports with h5bp-import tags (part 1) this one wraps @media types
+    # replace imports with h5bp-import tags (part 1) this one wraps @media types
     file = fs.readFile path.join(base, to), 'utf8', (err, body) ->
 
       # go sync during the process of replace to ease the process
