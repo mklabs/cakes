@@ -35,8 +35,14 @@ exports.concat = (files, callback) ->
 # and generates back the according `md5` hash, `hex` encoded.
 exports.checksum = (file, callback) ->
   md5 = crypto.createHash 'md5'
+
+  # assume file is the actual content if no callback is provided
+  unless callback
+    md5.update file
+    return md5.digest 'hex'
+
   fs.createReadStream(file)
-    .on('error', -> callback err)
+    .on('error', (err) -> callback err)
     .on('data', (data) -> md5.update data)
     .on('end', () -> callback null, md5.digest('hex'))
 

@@ -22,12 +22,13 @@ fs              = require 'fs'
 path            = require 'path'
 {spawn, exec}   = require 'child_process'
 {EventEmitter}  = require 'events'
-colors          = require('colors')
-prompt          = require('prompt')
-mkdirp          = require('mkdirp')
-config          = require('./conf/default')
-helper          = require('./helper')
+colors          = require 'colors'
+prompt          = require 'prompt'
+mkdirp          = require 'mkdirp'
+config          = require './conf/default'
+helper          = require './helper'
 uglify          = require 'uglify-js'
+cssmin          = require 'clean-css'
 
 base = process.cwd()
 
@@ -38,7 +39,7 @@ extend = exports.extend = (object, properties) ->
   object
 
 # ## configuration
-repo = 
+repo =
   h5bp: 'git://github.com/paulirish/html5-boilerplate.git'
 
 # merge the local config with global object for this module, 
@@ -53,19 +54,36 @@ gem = new EventEmitter
 # to provide a tasks-scopped EventEmitter to enable some async stuff and task ordering
 #
 _task = global.task
+
+# internal _tasks cache, stored as `taskname: status` where status turns false 
+# once the end event is emitted
+_tasks = {}
+
 task = (name, description, action) ->
 
   description = description.grey
-  _task name, description, (options) -> 
+  _task name, description, (options) ->
     em = new EventEmitter()
       .on('error', (err) -> console.log 'error occured'.red.bold; error err)
       .on('log', console.log.bind console, "  #{name} » ".magenta)
       .on('end', (results) ->
         console.log "✔ end:#{name}".green
         gem.emit "end:#{name}", results
+        _tasks[name] = 'done'
       )
 
-    action.call @, options, em
+    state = _tasks[name]
+
+    # emit the end event and prevent action call if the task is 
+    # already done
+    return gem.emit "end:#{name}" if state is 'done'
+
+    # set the task state to pending, will turn done once the task emiter
+    # emit the end event
+    _tasks[name] = 'pending'
+
+    # invoke the task if the task is unknown yet
+    action.call @, options, em unless state
 
 
 # error handler, usage:
@@ -105,20 +123,46 @@ task 'docs', 'Generates the source documentation of this cake script', (options,
 # * combining and minifying JS
 # * image optimization
 
+task 'build', 'Build with defaults configuration the main tasks: js, css and img optimiaztion', (option, em) ->
+
+  start = +new Date
+
+  invoke 'js'
+  invoke 'css'
+  invoke 'img'
+
+  remaining = 0
+  handle = (name) ->
+    remaining++
+    return ->
+      return unless --remaining is 0
+
+      em.emit 'log', "Build done, now copy the #{dir.intermediate} folder over to #{dir.publish}"
+      exec "cp -r #{base}/#{dir.intermediate} #{base}/#{dir.publish}", (options, err) ->
+        return error err if err
+        elapsed = (+new Date - start) / 1000
+        console.log "✔ Build Script successful (#{elapsed}s). Check your #{dir.publish}/ folder".green.bold
+        em.emit 'end'
+
+
+  gem.on 'end:js', handle()
+  gem.on 'end:css', handle()
+  gem.on 'end:img', handle()
+
+
+
 task 'js', 'Combines and minifies JS', (options, em) ->
 
   invoke 'js.scripts.concat'
 
-  gem.on 'end:js.scripts.concat', (err) ->
-    console.log 'scripts done'.green.bold, arguments
+  gem.on 'end:js.scripts.concat', em.emit.bind(em, 'end')
 
 
 task 'css', 'Combines and minifies CSS', (options, em) ->
 
-  invoke 'js.css.concat'
+  invoke 'css.concat'
 
-  gem.on 'js.css.concat:end', (err) ->
-    console.log 'css done'.green.bold, arguments
+  gem.on 'end:css.concat', em.emit.bind(em, 'end')
 
 task 'img', 'Performs img optimization', (options, em) ->
 
@@ -126,9 +170,7 @@ task 'img', 'Performs img optimization', (options, em) ->
   # dir.img folder
   invoke 'img.optimize'
 
-  gem.on 'img.optimize:end', (err) ->
-    console.log 'img done'.green.bold, arguments
-
+  gem.on 'end:img.optimize', em.emit.bind(em, 'end')
 
 # ### createproject
 #
@@ -218,7 +260,7 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
     =====================================================================
   """
 
-  em.emit 'log', message.grey
+  em.emit 'log', message.split('\n').join('\n  ').grey
   em.emit 'end', message.grey
 
 
@@ -245,9 +287,9 @@ task 'clean', 'Wipe the previous build', (options, em) ->
 # ### mkdirs
 # Create the directory structure
 #
-# Copy the whole `dir.source` to both `dir.puslish` and `dir.intermediate`
+# Copy the whole `dir.source` to `dir.intermediate`
 #
-task 'mkdirs', 'Create the directory structure', (options, em) ->
+task 'mkdirs', 'Create the directory intermediate structure', (options, em) ->
 
   invoke 'clean'
 
@@ -261,7 +303,7 @@ task 'mkdirs', 'Create the directory structure', (options, em) ->
       .on('error', console.error.bind(console))
       .on('end', (files) ->
         em.emit 'log', "Copying #{files.length} files over to #{dir.intermediate} and #{dir.publish} from #{dir.source}".grey
-        destinations = [dir.intermediate, dir.publish]
+        destinations = [dir.intermediate]
         remaining = files.length * destinations.length
         for to in destinations then do (to) ->
           for file in files then do(file) ->
@@ -278,13 +320,15 @@ task 'mkdirs', 'Create the directory structure', (options, em) ->
                 em.emit 'end', 'done' if --remaining is 0
       )
 
-
 # ## JS tasks
 
 # ### js.main.concat
 #
-# Concatenates the JS files in dir.js. depends on js.all.minify
+# Concatenates the JS files in dir.js. depends on mkdirs
 task 'js.main.concat', 'Concatenates the JS files in dir.js', (options, em) ->
+
+  invoke 'mkdirs'
+
   concat = (output) ->
     output = new Buffer output.join('\n\n')
     fs.writeFile path.join(__dirname, "#{dir.intermediate}", "#{dir.js}", 'script-concat.js'), output, (err) ->
@@ -295,7 +339,6 @@ task 'js.main.concat', 'Concatenates the JS files in dir.js', (options, em) ->
   handle = (files) ->
     em.emit 'log', 'Concatenating Main JS scripts...'
 
-    process.chdir path.join(__dirname, dir.intermediate)
     helper.fileset "#{dir.js.main}/plugins.js #{dir.js.main}/#{file.root.script}", '', (err, files) ->
       output = []
       remaining = files.length
@@ -307,13 +350,15 @@ task 'js.main.concat', 'Concatenates the JS files in dir.js', (options, em) ->
           concat(output) if --remaining is 0 
 
 
-  gem.once 'end:js.all.minify', handle
+  gem.once 'end:mkdirs', handle
 
 # ### js.mylibs.concat
 #
-# Concatenates the JS files in dir.js.mylibs. depends on js.all.minify
+# Concatenates the JS files in dir.js.mylibs. depends on mkdirs
 #
 task 'js.mylibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options, em) ->
+
+  invoke 'mkdirs'
 
   concat = (output) ->
     output = new Buffer output.join('\n\n')
@@ -322,7 +367,7 @@ task 'js.mylibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options,
       em.emit 'log', 'mylibs-concat.js just concat...'.grey
       em.emit 'end', true
 
-  gem.once 'end:js.all.minify', (files) ->
+  gem.once 'end:mkdirs', (files) ->
     em.emit 'log', "Concatenating JS libraries in #{dir.js.mylibs}".grey
 
     process.chdir path.join(__dirname, "#{dir.intermediate}")
@@ -350,18 +395,19 @@ task 'js.mylibs.concat', 'Concatenates the JS files in dir.js.mylibs', (options,
 #     publish/js/e816baa.scripts-concat.min.js
 #
 task 'js.scripts.concat', 'Concatenating library file with main script file', (options, em) ->
-  invoke 'js.all.minify'
+
   invoke 'js.main.concat'
   invoke 'js.mylibs.concat'
 
-  emit = (source) ->
-    emit.remaining = emit.remaining or= 0
-    emit.remaining++
-    return (args...) ->
-      return if --emit.remaining
-      process.chdir base
-      helper.fileset "#{dir.intermediate}/#{dir.js}/**-concat.js", (err, files) ->
+  concat = (source) ->
+    concat.remaining = concat.remaining or= 0
+    concat.remaining++
+
+    return ->
+      return if --concat.remaining
+      helper.fileset "#{base}/#{dir.intermediate}/#{dir.js}/**-concat.js", (err, files) ->
         return error err if err
+
         em.emit 'log', 'Concatenating library file with main script file'.grey
         helper.concat files, (err, buffers) ->
           return error err if err
@@ -373,43 +419,49 @@ task 'js.scripts.concat', 'Concatenating library file with main script file', (o
           output = buffers.map (buffer) ->
             return buffer.toString()
 
-          fs.writeFile from, output.join('\n\n'), (err) ->
-            return err if err
+          fs.writeFile path.join(base, from), output.join('\n\n'), (err) ->
+            return error err if err
             em.emit 'log', "File ✔ #{from}".grey
 
             em.emit 'log', 'Calculating checksum...'.grey
 
-            helper.checksum from, (err, md5) ->
+
+            helper.checksum path.join(base,from), (err, md5) ->
               return error err if err
 
               em.emit 'log', "✔ md5 is #{md5} for file #{from}"
               # now copy over the file to #{dir.js}/#{script.sha}.js
               md5 = md5.substring 0, hash.length
-              to = "#{dir.publish}/#{dir.js}/#{md5}.#{filename}"
+              to = "#{dir.intermediate}/#{dir.js}/#{md5}.#{filename}"
 
               em.emit 'log', "now copy over the file to #{to}"
-              return helper.copy from, to, (err) ->
+              return helper.copy path.join(base, from), path.join(base, to), (err) ->
                 return error err if err
                 em.emit 'log', "✔ Copy done » #{to}"
-                em.emit 'end'
 
-  gem.on('end:js.main.concat', emit('main'))
-  gem.on('end:js.mylibs.concat', emit('mylibs'))
+                em.emit 'log', 'Minify the output now...'
+                invoke 'js.all.minify'
+
+
+  gem.on 'end:js.main.concat', concat('main')
+  gem.on 'end:js.mylibs.concat', concat('mylibs')
+
+  gem.on 'end:js.all.minify', em.emit.bind(em, 'end')
 
 
 # ### js.mylibs.concat
 #
 # Minifies the scripts.js files in #{dir.intermediate}/#{dir.js}. depends on mkdirs
 #
-task 'js.all.minify', "Minifies the scripts.js files in #{dir.intermediate}/#{dir.js}", (options, em) ->
-  invoke 'mkdirs'
+task 'js.all.minify', "Minifies the *-concat.js files in #{dir.intermediate}/#{dir.js}", (options, em) ->
 
-  gem.on 'end:mkdirs', (result) ->
+  gem.once 'end:mkdirs', (result) ->
     em.emit 'log', 'Minifying scripts'.grey
 
     dirname = path.join dir.intermediate, dir.js
     process.chdir path.join(__dirname, dirname)
-    helper.fileset "**.js", "**.min.js", (err, files) ->
+    helper.fileset "**-concat.js", (err, files) ->
+
       return error err if err
 
       remaining = files.length
@@ -423,11 +475,13 @@ task 'js.all.minify', "Minifies the scripts.js files in #{dir.intermediate}/#{di
           ast = pro.ast_squeeze ast
           code = new Buffer pro.gen_code(ast)
 
+          file = file.replace(/\.js$/, '.min.js')
           fs.writeFile file, new Buffer(code), (err) ->
             return error err if err
             em.emit 'log', "Uglified #{file}".grey
             em.emit 'end', files if --remaining is 0
 
+  invoke 'mkdirs'
 
 # ## jshint
 # run the `dir.js` folder through jshint with default options. Exits and reports in case of lint errors.
@@ -464,32 +518,86 @@ task 'csslint', 'csslint task, run csslint on dir.css and ommit *.min.css one', 
         ].join('\n')
 
 
-# ## css optimization
+# ## CSS tasks
 
+# ### css.concat
+#
+# Concat the CSS files depending on the @imports in your file.root.stylesheet
+#
+# `@import` should be fortmated like so
+#
+#     @import url('style.bar.css')
+#     @import url("style.foo.css")
+#
+task 'css.concat', 'Concat the CSS files depending on the @imports in your file.root.stylesheet', (options, em) ->
 
+  invoke 'mkdirs'
 
-# ## html compression
+  gem.once 'end:mkdirs', ->
+    em.emit 'log', 'Copy source file to intermediate directory'
+    from = path.join dir.source, dir.css, file.root.stylesheet
+    to = path.join dir.intermediate, dir.css, file.root.stylesheet
+    return em.emit 'copy', from, to
 
-# ### usemin
-# Replaces references to non-minified scripts
-task 'usemin', 'Replaces references to non-minified scripts', (options) ->
+  # called once the source to intermediate copy is done
+  em.on 'copy', (from, to) ->
+    em.emit 'log', 'Concatenating any @imports'
 
-# ### manifest
-# Replaces references to non-minified scripts, depends js.script.concat
-task 'manifest', 'copying a fresh file.manifest to dir.intermediate', (options) ->
+    ## replace imports with h5bp-import tags (part 1) this one wraps @media types
+    file = fs.readFile path.join(base, to), 'utf8', (err, body) ->
 
-# ### htmlclean
-# Replaces references to non-minified scripts, depends usemin
-task 'htmlclean', 'Run htmlcompressor on th HTML', (options) ->
+      # go sync during the process of replace to ease the process
+      body = body.replace /@import url\([^\)]+\)/gi, (match) ->
+        file = match.match(/@import url\(([^\)]+)\)/)?[1].replace(/['|"]/g, '')
+        filepath = path.join base, dir.intermediate, dir.css, file
 
-# ### htmlbuildkit
-# Replaces references to non-minified scripts, depends usemin
-task 'htmlbuildkit', 'Run htmlcompressor on th HTML', (options) ->
+        # test if the url property is valid and match an actual file in the repo
+        ok = path.existsSync filepath
+        return error new Error("@import-ed #{filepath} does not exist") unless ok
 
-# ### htmlcomplress
-# Replaces references to non-minified scripts,  depends usemin
-task 'htmlcompress', 'Run htmlcompressor on th HTML', (options) ->
+        em.emit 'log', "replacing #{match} with #{file} content"
+        return "/* h5bp-import --> #{file} */\n" + fs.readFileSync filepath, 'utf8'
 
-# ## img optimization
+      # now minify the whole css file, done using clean-css
+      # may just opt to use yuicompressor instead by spawning a java process
+      # (make it configurable)
+      em.emit 'log', "Minify #{to} file..."
+      body = cssmin.process body
+      em.emit 'log', 'Done'.green
+      # write the file to the intermediate dir
+      to = path.join base, to
+
+      checksum = helper.checksum(body).substring 0, hash.length
+
+      em.emit 'log', "Cheskum for this file is #{checksum}"
+      to = to.replace(/\.css/, ".#{checksum}.min.css")
+      em.emit 'log', "Write the min css file to #{to}"
+      fs.writeFile to, body, (err) ->
+        return error err if err
+        em.emit 'end', body
+
+# ## img optimization tasks
+
+# ### img.optimize
+# mainly done using optipng and  by spawning child process, so you'll need
+# optipng in yout PATH for this to work
+#
+# no jpg optimization for now
+task 'img.optimize', 'Run optipng', (options, em) ->
+
+  invoke 'mkdirs'
+
+  gem.once 'end:mkdirs', ->
+    em.emit 'log', 'Optimizing images...'
+    em.emit 'log', 'This part might take a while. But everything else is most likely already done.'
+
+    em.emit 'log', 'Run optipng on the .png files'
+
+    # run optipng with default options (make this configurable)
+    exec "optipng #{base}/#{dir.intermediate}/#{dir.images}/*.png", (err, stdout, stderr) ->
+      return error new Error( (stderr || stdout).trim().split('\n').join('\n  » ') ) if err
+
+      em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey, '\n\n'
+      em.emit 'end'
 
 
