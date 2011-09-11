@@ -130,6 +130,7 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
   invoke 'js'
   invoke 'css'
   invoke 'img'
+  invoke 'usemin'
 
   remaining = 0
   handle = (name) ->
@@ -154,6 +155,7 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
   gem.on 'end:js', handle()
   gem.on 'end:css', handle()
   gem.on 'end:img', handle()
+  gem.on 'end:usemin', handle()
 
 
 
