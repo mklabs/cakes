@@ -6,6 +6,16 @@
 #
 # Running `cake` with no arguments will print out a list of all the tasks in the
 # current directory's Cakefile.
+#
+# TODO:
+# * break the script in smaller parts
+#
+#   * js
+#   * css
+#   * html
+#   * img
+#   * lint
+#
 
 # External dependencies.
 fs              = require 'fs'
@@ -71,6 +81,8 @@ error = (err) ->
 
 # ### docs
 # Generates the source documentation of this cake script
+#
+# added as a conveniency
 task 'docs', 'Generates the source documentation of this cake script', (options, em) ->
 
   commands = [
@@ -87,7 +99,7 @@ task 'docs', 'Generates the source documentation of this cake script', (options,
     em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey
     em.emit 'end'
 
-# Main tasks
+# ## Main tasks
 #
 # * combining and minifying CSS
 # * combining and minifying JS
@@ -144,7 +156,7 @@ task 'img', 'Performs img optimization', (options, em) ->
 #
 #     Created Project: [name]
 # Success! You now have a clean project to begin making the next HTML5 wunderkind demo!
-# 
+#
 
 task 'createproject', 'a simple create project task', (options) ->
 
@@ -185,7 +197,9 @@ task 'createproject', 'a simple create project task', (options) ->
           console.log "  ✔  Created Project: #{dest}".grey.bold
 
 
-# ### intro 
+# ## Support tasks
+
+# ### intro
 #
 # Output the intro message
 #
@@ -265,6 +279,7 @@ task 'mkdirs', 'Create the directory structure', (options, em) ->
       )
 
 
+# ## JS tasks
 
 # ### js.main.concat
 #
