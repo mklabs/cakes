@@ -9,7 +9,12 @@
   "engines": {
     "node": "> 0.4"
   },
-  "scripts": { "test": "node h5bp/tests/*.js --spec" },
+  "scripts": { "test": "vows h5bp/tests/*.js --spec" },
+  "config": {
+    "port": 8080,
+    "host": "localhost",
+    "root": "publish"
+  },
   "dependencies": {
     "fileset": "0.0.x",
     "colors": "0.5.0",
