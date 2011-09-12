@@ -29,6 +29,7 @@ vows.describe("build/basics").addBatch({
 
         var scripts = $('script[src]');
 
+        assert.ok($('script[src*=modernizr]').length, 'modernizr');
         assert.ok(scripts.length, 'should have some script with src attribute'.red.bold);
         assert.ok($('link[href]').length, 'should have some links with href attribute'.red.bold);
 

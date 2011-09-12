@@ -1,4 +1,3 @@
-
 # `cake` is a simplified version of [Make](http://www.gnu.org/software/make/)
 # ([Rake](http://rake.rubyforge.org/), [Jake](http://github.com/280north/jake))
 # for CoffeeScript. You define tasks with names and descriptions in a Cakefile,
@@ -141,22 +140,27 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
 
       em.emit 'log', "Build done, now copy the #{dir.intermediate} folder over to #{dir.publish}"
 
-      commands = [
-        "cp -r #{base}/#{dir.intermediate} #{base}/#{dir.publish}",
-        "rm -rf #{base}/#{dir.intermediate}"
-      ].join(' && ')
-
-      exec commands, (options, err) ->
-        return error err if err
-        elapsed = (+new Date - start) / 1000
-        console.log "✔ Build Script successful (#{elapsed}s). Check your #{dir.publish}/ folder".green.bold
-        em.emit 'end'
+      em.emit 'log', 'minify html before copy...'
+      invoke 'htmlclean'
+      # gem.emit 'end:htmlclean'
 
 
   gem.on 'end:js', handle()
   gem.on 'end:css', handle()
   gem.on 'end:img', handle()
   gem.on 'end:usemin', handle()
+  gem.on 'end:htmlclean', ->
+    commands = [
+      "cp -r #{base}/#{dir.intermediate} #{base}/#{dir.publish}",
+      "rm -rf #{base}/#{dir.intermediate}"
+    ].join(' && ')
+
+    exec commands, (options, err) ->
+      return error err if err
+      elapsed = (+new Date - start) / 1000
+      console.log "✔ Build Script successful (#{elapsed}s). Check your #{dir.publish}/ folder".green.bold
+      em.emit 'end'
+
 
 
 
@@ -703,18 +707,18 @@ task 'htmlclean', 'Peforms basic to aggresive minification', (options, em) ->
     # get the file to min
     em.emit 'log', "Run on #{file.pages.default.include}"
 
-    console.log 'chdir to :', path.join(base, dir.intermediate)
     process.chdir path.join(base, dir.intermediate)
     helper.fileset "#{file.pages.default.include}", (err, pages) ->
       return error err if err
 
+      remaining = pages.length
       for page in pages then do (page) ->
-       console.log page
        fs.readFile page, 'utf8', (err, body) ->
         return error err if err
 
         # todo: move the configuration over to config files
         # going with most aggresive minification for now
+
         output = htmlmin.minify body, {
           removeComments: true
           removeCommentsFromCDATA: true
@@ -725,11 +729,16 @@ task 'htmlclean', 'Peforms basic to aggresive minification', (options, em) ->
           removeScriptTypeAttributes: true
           removeStyleLinkTypeAttributes: true
           collapseWhitespace: true
-          removeEmptyElements: true
+
+          # tests no longer pass when set to true, stripping some scripts
+          # removeEmptyElements: true
           collapseBooleanAttributes: true
           removeOptionalTags: true
         }
-        console.log output
+
+        fs.writeFile page, output, (err) ->
+          return error err if err
+          em.emit 'end' if --remaining is 0
 
   invoke 'mkdirs'
 
