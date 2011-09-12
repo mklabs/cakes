@@ -17,11 +17,12 @@
   },
   "dependencies": {
     "fileset": "0.0.x",
-    "colors": "0.5.0",
+    "colors": "0.5.x",
     "prompt": "0.1.x",
     "mkdirp": "0.0.6",
     "uglify-js": "1.0.x",
-    "clean-css": "0.2.4"
+    "clean-css": "0.2.4",
+    "html-minifier": "0.4.x"
   },
   "devDependencies": {
     "coffee-script": "1.1.2",
