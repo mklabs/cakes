@@ -29,6 +29,7 @@ config          = require './conf/default'
 helper          = require './helper'
 uglify          = require 'uglify-js'
 cssmin          = require 'clean-css'
+htmlmin         = require 'html-minifier'
 
 base = process.cwd()
 
@@ -245,7 +246,6 @@ task 'createproject', 'a simple create project task', (options) ->
 
           output.forEach (line) -> console.log "    » #{line}".grey
           console.log "  ✔  Created Project: #{dest}".grey.bold
-
 
 # ## Support tasks
 
@@ -673,4 +673,50 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
   invoke 'js'
   invoke 'css'
 
+# ## html tasks
+
+# ### manifest
+# stumb method for now.
+
+task 'manifest', 'Manifest stuff', (options, em) ->
+
+# ### htmlclean
+#
+# using the fantastic html minifier tool by kangax:: https://github.com/kangax/html-minifier 
+task 'htmlclean', 'Peforms basic to aggresive minification', (options, em) ->
+  em.emit 'log', 'Run html-minifier on the HTML with standard options'
+
+  gem.once 'end:mkdirs', ->
+    # get the file to min
+    em.emit 'log', "Run on #{file.pages.default.include}"
+
+    console.log 'chdir to :', path.join(base, dir.intermediate)
+    process.chdir path.join(base, dir.intermediate)
+    helper.fileset "#{file.pages.default.include}", (err, pages) ->
+      return error err if err
+
+      for page in pages then do (page) ->
+       console.log page
+       fs.readFile page, 'utf8', (err, body) ->
+        return error err if err
+
+        # todo: move the configuration over to config files
+        # going with most aggresive minification for now
+        output = htmlmin.minify body, {
+          removeComments: true
+          removeCommentsFromCDATA: true
+          removeEmptyAttributes: true
+          cleanAttributes: true
+          removeAttributeQuotes: true
+          removeRedundantAttributes: true
+          removeScriptTypeAttributes: true
+          removeStyleLinkTypeAttributes: true
+          collapseWhitespace: true
+          removeEmptyElements: true
+          collapseBooleanAttributes: true
+          removeOptionalTags: true
+        }
+        console.log output
+
+  invoke 'mkdirs'
 
