@@ -9,6 +9,7 @@
 path            = require 'path'
 fs              = require 'fs'
 crypto          = require 'crypto'
+child         = require 'child_process'
 
 # ## fileset
 # expose filset module as helper method
@@ -62,3 +63,22 @@ exports.copy = (from, to, callback) ->
     .on('end', -> callback null )
     .on('error', (err) -> callback err)
 
+
+exports.spawn = (cmd, args, callback) ->
+  stderr = []
+  stdout = []
+  ch = child.spawn(cmd, args)
+
+  ch.stdout.pipe process.stdout, {end: false}
+  ch.stderr.pipe process.stderr
+  ch.stdout.on 'data', (data) -> stdout[stdout.length] = data
+  ch.stderr.on 'data', (data) -> stderr[stderr.length] = data
+
+  ch.on 'exit', (code) ->
+    stdout = stdout.join '\n'
+    stderr = stderr.join '\n'
+
+    callback code, stdout, stderr if callback
+    ch.emit 'end', code,  stdout, stderr
+
+  return ch
