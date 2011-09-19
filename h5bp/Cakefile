@@ -131,6 +131,7 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
   invoke 'css'
   invoke 'img'
   invoke 'usemin'
+  invoke 'usecssmin'
 
   remaining = 0
   handle = (name) ->
@@ -149,6 +150,9 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
   gem.on 'end:css', handle()
   gem.on 'end:img', handle()
   gem.on 'end:usemin', handle()
+  gem.on 'end:usecssmin', handle()
+
+
   gem.on 'end:htmlclean', ->
     commands = [
       "cp -r #{base}/#{dir.intermediate} #{base}/#{dir.publish}",
@@ -179,11 +183,12 @@ task 'css', 'Combines and minifies CSS', (options, em) ->
 
 task 'img', 'Performs img optimization', (options, em) ->
 
-  # will most likely be done by using spawning optipng on
-  # dir.img folder
-  invoke 'img.optimize'
+  # img.rev depends on img.optimize, which runs optipng on img/*.png with 
+  # standards options. img.rev handle the automatic revving of img
+  # filenames.
+  invoke 'img.rev'
 
-  gem.on 'end:img.optimize', em.emit.bind(em, 'end')
+  gem.on 'end:img.rev', em.emit.bind(em, 'end')
 
 # ### createproject
 #
@@ -523,7 +528,7 @@ task 'jshint', 'jshint task, run jshint on any non min.js file in dir.js', (opti
 # ## csslint
 # run the `dir.css` folder through csslint with default options. Reports in case of lint errors.
 #
-# Run separately 
+# Run separately
 task 'csslint', 'csslint task, run csslint on dir.css and ommit *.min.css one', (options, em) ->
   helper.fileset "#{dir.source}/#{dir.css}/", "**/*.min.css", (err, files) ->
     return error err if err
@@ -617,7 +622,7 @@ task 'img.optimize', 'Run optipng', (options, em) ->
     em.emit 'log', 'Run optipng on the .png files'
 
     # check that we have actual png files before runing optipng
-    helper.fileset "optipng #{base}/#{dir.intermediate}/#{dir.images}/*.png", (err, files) ->
+    helper.fileset "#{base}/#{dir.intermediate}/#{dir.images}/*.png", (err, files) ->
       return erorr err if err
 
       # prevent optipng from returning with error if no files to process
@@ -630,11 +635,50 @@ task 'img.optimize', 'Run optipng', (options, em) ->
         em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey, '\n\n'
         em.emit 'end'
 
+# ## img.ref
+#
+# should we do this before, or after img.optimization?
+task 'img.rev', 'handle the automatic revving of image filenames', (options, em) ->
+  invoke 'img.optimize'
+
+  gem.once 'end:img.rev', (chk) ->
+    em.emit 'log', chk
+
+  gem.once 'end:img.optimize', ->
+    em.emit 'log', 'Going to rev image filenames'
+
+    helper.fileset "#{base}/#{dir.intermediate}/#{dir.images}/*.png", (err, files) ->
+      return error err if err
+
+      checksums = global.checksums = []
+
+      return em.emit 'end' unless files.length
+      remaining = files.length
+      for file in files then do (file) ->
+        helper.checksum file, (err, checksum) ->
+          checksum = checksum.substring 0, hash.length
+          em.emit 'log', "#{file} checksum is #{checksum}"
+
+          filename = file.split('/').reverse()[0]
+          checksum = "#{checksum}.#{filename}"
+          em.emit 'log', "copying #{filename} to #{checksum}"
+
+          helper.copy file, file.replace(filename, checksum), (err) ->
+            return error err if err
+
+            # once copy done, also keep reference to filename -> sha, to use in `usemin`
+            # probably not the best way to do this, relying on module-scoped variable
+            checksums.push(checksum)
+            em.emit 'end', checksums if --remaining is 0
+
+
 # ## Html tasks
 #
 # tasks related to html manipulation such as cleaning
 # and updating script/css references, html minification and so on
-#
+
+
+# ### usemin
 task 'usemin', 'Replaces references to non-minified scripts/styles', (options, em) ->
   remaining = 0
   handle = ->
@@ -678,6 +722,17 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
             body = body.replace /<link rel=["']?stylesheet["']?\shref=["']?(.*)\/style.css["']?\s*>/gm, (match, prefix) ->
               return "<link rel=\"stylesheet\" href=\"#{prefix}/#{style.css}\">"
 
+            em.emit 'log', "Update the HTML with the new img filenames: ", checksums.join(' - ')
+
+            checksums.forEach (file) ->
+              parts = file.split('.')
+              filename = parts[1..].join('.')
+              em.emit 'log', "update html files #{filename} with #{file}"
+              reg = new RegExp(filename)
+              body = body.replace /<img.+src=['"](.+)["'].+\/>/gm, (match, img) ->
+                em.emit 'log', 'replace ', img, ' on -->', match
+                return if reg.test img then match.replace(filename, file) else match
+
             fs.writeFile page, body, (err) ->
               return error err if err
               em.emit 'log', "#{page} now referencing minified files"
@@ -686,9 +741,50 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
 
   gem.on 'end:js', handle()
   gem.on 'end:css', handle()
+  gem.on 'end:img', handle()
 
   invoke 'js'
   invoke 'css'
+  invoke 'img'
+
+
+task 'usecssmin', 'update rev img in css files', (options, em) ->
+
+  invoke 'css'
+  invoke 'img'
+
+  remaining = 0
+  handle = ->
+    remaining++
+    return ->
+      return unless --remaining is 0
+
+      helper.fileset "#{base}/#{dir.intermediate}/#{dir.css}/**.css", (err, styles) ->
+        return error err if err
+
+        ln = styles.length
+        for style in styles then do(style) ->
+          fs.readFile style, 'utf8', (err, body) ->
+            return error err if err
+
+            em.emit 'log', "Update the CSS with the new img filenames: ", checksums.join(' - ')
+            checksums.forEach (file) ->
+              parts = file.split('.')
+              filename = parts[1..].join('.')
+              em.emit 'log', "updating #{filename} with #{file}"
+              body = body.replace new RegExp(filename, 'g'), file
+
+
+
+            fs.writeFile style, body, (err) ->
+              return error err if err
+              em.emit 'log', "#{style} now referencing rev files"
+              em.emit 'end' if --ln is 0
+
+
+
+  gem.once 'end:css', handle()
+  gem.once 'end:img', handle()
 
 # ## html tasks
 
@@ -699,7 +795,7 @@ task 'manifest', 'Manifest stuff', (options, em) ->
 
 # ### htmlclean
 #
-# using the fantastic html minifier tool by kangax:: https://github.com/kangax/html-minifier 
+# using the fantastic html minifier tool by kangax:: https://github.com/kangax/html-minifier
 task 'htmlclean', 'Peforms basic to aggresive minification', (options, em) ->
   em.emit 'log', 'Run html-minifier on the HTML with standard options'
 
