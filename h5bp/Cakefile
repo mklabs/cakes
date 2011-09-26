@@ -92,7 +92,8 @@ task = (name, description, action) ->
 #
 #     return error new Error(':((') if err
 error = (err) ->
-  console.error '  ✗ '.red + err.message.red
+  err_msg = err.message + ''
+  console.error '  ✗ '.red + err_msg.red
   process.exit 1
 
 
