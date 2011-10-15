@@ -9,7 +9,7 @@
 path            = require 'path'
 fs              = require 'fs'
 crypto          = require 'crypto'
-child         = require 'child_process'
+child           = require 'child_process'
 
 # ## fileset
 # expose filset module as helper method

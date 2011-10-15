@@ -10,7 +10,7 @@ var error = function(err) {
   process.exit(1);
 };
 
-var build = path.join(__dirname, '../publish');
+var build = path.join(__dirname, '..', process.env.npm_package_config_root);
 
 var assertFile = function(files, expect) {
   var count = expect;

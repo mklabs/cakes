@@ -10,6 +10,7 @@
     "node": "> 0.4"
   },
   "scripts": {
+    "pretest": "cd h5bp/ && cake -o _test createproject && cake build",
     "test": "vows h5bp/tests/basic.js --spec"
   },
   "config": {
@@ -26,12 +27,10 @@
     "clean-css": "0.2.4",
     "html-minifier": "0.4.x",
     "winston": "~0.5.5",
-    "eyes": "~0.1.6"
+    "eyes": "~0.1.6",
+    "coffee-script": "1.1.2"
   },
   "devDependencies": {
-    "coffee-script": "1.1.2",
-    "connect": "1.7.x",
-    "zombie": "0.10.x",
     "vows": "0.5.x"
   }
 }

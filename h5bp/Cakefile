@@ -39,11 +39,19 @@ levels          = winston.config.cli.levels
 
 base = process.cwd()
 
+console.log base
+
+# options parsing, needs this to be able to parse command line arguments and used them outside of a cake task
+# mainly for the loglevel options
 switches = [
-  ['-l', '--loglevel [level]', 'What level of logs to report. Values → ' + Object.keys(levels).join(', ') + ' or silent']
+  ['-l', '--loglevel [level]', 'What level of logs to report. Values → ' + Object.keys(levels).join(', ') + ' or silent'],
+  ['-o', '--output [DIR]', 'directory for the createproject task']
 ]
+
 oparse = new optparse.OptionParser switches
 options = oparse.parse process.argv.slice(2)
+
+# still call option to make cake keep track of these options too
 option.apply this, opt for opt in switches
 
 if options.loglevel and options.loglevel isnt 'silent' and levels[options.loglevel] is undefined
@@ -277,7 +285,6 @@ task 'img', 'Performs img optimization', (options, em) ->
 # Success! You now have a clean project to begin making the next HTML5 wunderkind demo!
 #
 
-option '-o', '--output [DIR]', 'directory for the creteproject task'
 task 'createproject', 'a simple create project task', (options) ->
 
   src = path.join __dirname, repo.h5bp.split('/').reverse()[0].replace(/\.git/, '')
@@ -290,6 +297,7 @@ task 'createproject', 'a simple create project task', (options) ->
 
   args = (if exists then 'pull origin master' else "clone #{repo.h5bp}").split(' ')
 
+  process.chdir src
   helper.spawn 'git', args, (code, stdout, stderr) ->
     return error new Error('err') if code > 0
     stdout = stdout.replace(/\n/gm, '')
@@ -315,6 +323,7 @@ task 'createproject', 'a simple create project task', (options) ->
 
           output.forEach (line) -> console.log "    » #{line}".grey
           console.log "  ✔  Created Project: #{dest}".grey.bold
+          process.chdir base
 
 
 
