@@ -1,7 +1,7 @@
 
 {spawn, exec}   = require 'child_process'
 
-# ### docs
+# ### cake docs
 # Generates the source documentation of this cake script
 #
 # added as a conveniency

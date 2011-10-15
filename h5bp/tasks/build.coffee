@@ -14,6 +14,15 @@ base = process.cwd()
 # * combining and minifying JS
 # * image optimization
 
+
+# ### cake build
+# Build with defaults configuration the main tasks: js, css and img optimiaztion. Depends on:
+#
+# * js
+# * css
+# * img
+# * usemin
+# * usecssmin
 task 'build', 'Build with defaults configuration the main tasks: js, css and img optimiaztion', (option, em) ->
 
   start = +new Date
@@ -57,21 +66,24 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
       em.emit 'end'
 
 
-
-
+# ### cake js
+# Combines and minifies JS
 task 'js', 'Combines and minifies JS', (options, em) ->
 
   invoke 'js.scripts.concat'
 
   gem.on 'end:js.scripts.concat', em.emit.bind(em, 'end')
 
-
+# ### cake css
+# Combines and minifies CSS
 task 'css', 'Combines and minifies CSS', (options, em) ->
 
   invoke 'css.concat'
 
   gem.on 'end:css.concat', em.emit.bind(em, 'end')
 
+# ### cake img
+# Performs img optimization
 task 'img', 'Performs img optimization', (options, em) ->
 
   # img.rev depends on img.optimize, which runs optipng on img/*.png with 
@@ -83,9 +95,9 @@ task 'img', 'Performs img optimization', (options, em) ->
 
 # ## Support tasks
 
-# ### intro
+# ### cake intro
 #
-# Output the intro message
+# Output the intro message.
 #
 task 'intro', 'Kindly inform the developer about the impending magic', (options, em) ->
   message = """
@@ -105,7 +117,9 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
   em.emit 'log', message.split('\n').join('\n  ').grey
   em.emit 'end', message.grey
 
-
+# ### cake check
+#
+# Performs few validations upon the current repo, outputing errors if any
 task 'check', 'Performs few validations upon the current repo, outputing errors if any', (options, em) ->
   # check few configuration values, namely dir.source
   # Test whether or not the dir.source path exists.
@@ -113,13 +127,14 @@ task 'check', 'Performs few validations upon the current repo, outputing errors 
 
   return error new Error("#{base}/#{dir.source} does not exist, change the dir.source config or run cake createproject and enter #{dir.source} when prompted") unless exists
 
-
+# ### cake check
+#
+# Wipe the previous build
 task 'clean', 'Wipe the previous build', (options, em) ->
   invoke 'intro'
   invoke 'check'
 
   em.emit 'log', 'Cleaning up previous build directory...'.grey
-
 
   exec "rm -rf #{dir.intermediate} #{dir.publish}", (err, stdout, stderr) ->
     return error err if err
@@ -129,7 +144,7 @@ task 'clean', 'Wipe the previous build', (options, em) ->
 # ### mkdirs
 # Create the directory structure
 #
-# Copy the whole `dir.source` to `dir.intermediate`
+# Copy the whole `dir.source` to `dir.intermediate`.
 #
 task 'mkdirs', 'Create the directory intermediate structure', (options, em) ->
 

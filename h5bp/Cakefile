@@ -1,3 +1,4 @@
+#
 # `cake` is a simplified version of [Make](http://www.gnu.org/software/make/)
 # ([Rake](http://rake.rubyforge.org/), [Jake](http://github.com/280north/jake))
 # for CoffeeScript. You define tasks with names and descriptions in a Cakefile,
@@ -6,48 +7,71 @@
 # Running `cake` with no arguments will print out a list of all the tasks in the
 # current directory's Cakefile.
 #
-# TODO:
-# * break the script in smaller parts
-#
-#   * js
-#   * css
-#   * html
-#   * img
-#   * lint
+# Running `cake help` will output man pages, generated from the source files. Use the
+# `--help` or `-h` options to set a valid task file.
 #
 
-# External dependencies.
 fs              = require 'fs'
 path            = require 'path'
 {EventEmitter}  = require 'events'
 vm              = require 'vm'
 colors          = require 'colors'
 coffee          = require 'coffee-script'
+{extend}        = require './tasks/util/helper'
 config          = require './conf/default'
-extend          = require('./tasks/util/helper').extend
 
-# options parsing, to be able to parse command line arguments and used them outside of a cake task
-# mainly for the loglevel options
+
+# ### Options
+# Options are handled using coffeescript optparser,
+# You can define the option with short and long flags,
+# and it will be made available in the options object.
+
 options = require './tasks/util/options'
 
-# setup logger
+# ### Logger
+# Logs are handled via winston with cli mode and a default level set to 
+# input. The log level is set by the `-l` or `--loglevel` cli options:
+#
+# * silly
+# * input
+# * verbose
+# * prompt
+# * info
+# * data
+# * help
+# * warn
+# * debug
+# * error
+#
 log = require('./tasks/util/log')(options)
 
-# merge the local config with global object for this module,
-# so that interpolation works as expected (todo: calrify configuration)
+# ### error() handler
+#
+#     return error err if err
+#     return error new Error(':((') if err
+error = (err) ->
+  log.error '  ✗ '.red + (err.message || err).red
+  process.exit 1
+
+# ### config 
+# merge the local config with global object for this module, so that interpolation works as expected (todo: calrify configuration)
 extend global, config
 
-# the event emitter used along tasks to handle some asynchronous stuff, gem for global EventEmitter
+# ### gem
+# the event emitter used along tasks to handle some asynchronous stuff, gem for global EventEmitter. Basically,
+# this is the main mediator that tasks listen to `end:` events to know wheter thay can be executed. Each tasks to 
+# notify that their async work is done simply emit an `end` event on the local EventEmitter of the task (third argument).
 gem = new EventEmitter
 
 # ### task monkey-patch
 #
-# to provide a tasks-scopped EventEmitter to enable some async stuff and task ordering
+# To provide a tasks-scopped EventEmitter and enable some async stuff and task ordering.
 #
 _task = global.task
 
-# internal _tasks cache, stored as `taskname: status` where status turns false
-# once the end event is emitted
+# `_tasks` is the internal cache, stored as `taskname: status` where status turns false
+# once the end event is emitted. Tasks should not be runned more than once, even if multiple
+# tasks `invoke()`-d them.
 _tasks = {}
 
 task = (name, description, action) ->
@@ -55,7 +79,14 @@ task = (name, description, action) ->
   description = description.grey
   _task name, description, (options) ->
     em = new EventEmitter()
-      # provide a few logging helpers
+      # a local `EventEmitter` is created and passed in as a third parameter. Namely provides a few logging helpers:
+      #     em.emit 'log', 'Something to log'
+      #     em.emit 'warn', 'Something to warn'
+      #     em.emit 'error', 'Error to log, and exit program'
+      #     em.emit 'data', {foo: 'bar'}
+      #
+      # The special `end` event allows tasks to run asynchronously and still be able to depends on each other. Once ended,
+      # a task notify its status to the global EventEmitter by emitting an `end:taskname` event.       
       .on('error', (err) -> log.error 'error occured'.red.bold; error err)
       .on('warn', (err) -> log.warn err)
       .on('log', log.input.bind log, "#{name} » ".magenta)
@@ -69,8 +100,8 @@ task = (name, description, action) ->
 
     state = _tasks[name]
 
-    # emit the end event and prevent action call if the task is
-    # already done
+    # This (simple) async system and task dependency ensures that a task is only executed once. We emit the
+    # end event and prevent action call if the task is already done.
     return gem.emit "end:#{name}" if state is 'done'
 
     # set the task state to pending, will turn done once the task emiter
@@ -82,20 +113,16 @@ task = (name, description, action) ->
     action.call @, options, em unless state
 
 
-# error handler, usage:
 #
-#     return error err if err
+# ### Autoload tasks in tasks/
 #
-#     return error new Error(':((') if err
-error = (err) ->
-  log.error '  ✗ '.red + (err.message || err).red
-  process.exit 1
-
+# Any `.coffee` or `.js` file in `tasks/` gets loaded and made available as if their content
+# was in this Cakefile. Each tasks is added in the order they're defined, sorted by the task filename.
 #
-# Autoload tasks in tasks/
-#
+# A coffeescript file is compiled before running in a vm context. This system allows both coffee-script
+# and JS files to be used to create or maintain cake tasks.
 fs.readdirSync(path.join(__dirname, 'tasks'))
-  .filter((file) -> fs.statSync(path.join(__dirname, 'tasks', file)).isFile())
+  .filter((file) -> fs.statSync(path.join(__dirname, 'tasks', file)).isFile() && !/^\./.test(file) )
   .forEach (file) ->
     script = fs.readFileSync path.join(__dirname, 'tasks', file), 'utf8'
     # tasks may be written in pure JS or coffee. Take care of coffee compile if needed.
@@ -108,16 +135,27 @@ fs.readdirSync(path.join(__dirname, 'tasks'))
       require: require
       error: error
       gem: gem
-      __filename: file
+      __filename: path.join __dirname, 'tasks', file
       __dirname: path.dirname path.join(__dirname, 'tasks', file)
 
+    log.silly "Import #{file}"
     vm.runInNewContext script, context, file
 
 
+# ### cake config
+# Show configuration for key
+#
+#     cake config
+#     cake --k dir config
+#     cake --key paths config
+#
+task 'config', 'Show configuration for key', (options, em) ->
+  conf = config[options.key]
+  em.emit 'warn', "No #{options.key} in config".yellow.bold if not conf
+  em.emit 'data', conf or config
 
 # ### manifest
-# stumb method for now.
-
-task 'manifest', 'Manifest stuff', (options, em) ->
+# not (yet) implemented.
+task 'manifest', 'Manifest stuff (not implemented)', (options, em) ->
 
 

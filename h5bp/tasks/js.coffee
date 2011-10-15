@@ -9,6 +9,8 @@ helper = require './tasks/util/helper'
 base = process.cwd()
 
 # ## JS tasks
+# These tasks are related to JS optimizations, mainly concat, `@import`  and minification 
+# (using [clean-css](https://github.com/GoalSmashers/clean-css#readme))
 
 # ### js.main.concat
 #

@@ -8,11 +8,9 @@ helper = require './tasks/util/helper'
 
 base = process.cwd()
 
-# ## configuration
 repo =
   h5bp: 'git://github.com/paulirish/html5-boilerplate.git'
 
-# ### createproject
 #
 # Generate a new project from your HTML5 Boilerplate repo clone
 #

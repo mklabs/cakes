@@ -8,13 +8,13 @@ helper = require './tasks/util/helper'
 
 base = process.cwd()
 
-# ## Html tasks
+# ## HTML tasks
 #
 # tasks related to html manipulation such as cleaning
 # and updating script/css references, html minification and so on
 
 
-# ### htmlclean
+# ### cake htmlclean
 #
 # using the fantastic html minifier tool by kangax:: https://github.com/kangax/html-minifier
 task 'htmlclean', 'Peforms basic to aggresive minification', (options, em) ->
@@ -60,7 +60,9 @@ task 'htmlclean', 'Peforms basic to aggresive minification', (options, em) ->
   invoke 'mkdirs'
 
 
-# ### usemin
+# ### cake usemin
+# Replaces references to non-minified scripts/styles in HTML files.
+#
 task 'usemin', 'Replaces references to non-minified scripts/styles', (options, em) ->
   remaining = 0
   scripts = {}
@@ -83,36 +85,41 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
         pagesCount = pages.length
         for page in pages then do (page) ->
 
-          # again go sync during the replace process
           fs.readFile page, 'utf8', (err, body) ->
             return error err if err
 
+            # * switch from a regular jquery to minified
             em.emit 'log', 'switch from a regular jquery to minified'
             body = body.replace /jquery-(\d|\d(\.\d)+)\.js/g, (file, version) ->
               return "jquery-#{version}.min.js"
 
+            # * switch any google CDN reference to minified'
             em.emit 'log', 'switch any google CDN reference to minified'
             body = body.replace /(\d|\d(\.\d)+)\/jquery\.js/g, (match, version) ->
               return "#{version}/jquery.min.js"
 
+            # * Kill off those versioning flags: ?v=2'
             em.emit 'log', 'Kill off those versioning flags: ?v=2'
             body = body.replace /\?v=\d+/g, (match) ->
               return ""
 
+            # * Remove favicon.ico reference if it is pointing to the root
             em.emit 'log', 'Remove favicon.ico reference if it is pointing to the root'
             body = body.replace /<link rel=["']shortcut icon["'] href=["']\/favicon\.ico["']>/g, (match) ->
               return ""
 
+            # Update the HTML to reference our concatenated script file.
             em.emit 'log', "Update the HTML to reference our concatenated script file: #{scripts.js}"
             body = body.replace /<!-- scripts concatenated[\d\w\s\W]*<!-- end scripts -->/gm, ->
               return "<script defer src=\"#{dir.js}/#{scripts.js}\"></script>"
 
-            em.emit 'log', "Update the HTML with the new css filename: #{style.css}"
+            # Update the HTML with the new css filenames.
+            em.emit 'log', "Update the HTML with the new css filenames: #{style.css}"
             body = body.replace /<link rel=["']?stylesheet["']?\shref=["']?(.*)\/style.css["']?\s*>/gm, (match, prefix) ->
               return "<link rel=\"stylesheet\" href=\"#{prefix}/#{style.css}\">"
 
+            # Update the HTML with the new img filenames.
             em.emit 'log', "Update the HTML with the new img filenames: ", checksums.join(' - ')
-
             checksums.forEach (file) ->
               parts = file.split('.')
               filename = parts[1..].join('.')
@@ -136,8 +143,12 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
   invoke 'css'
   invoke 'img'
 
-
-task 'usecssmin', 'update rev img in css files', (options, em) ->
+# ### cake usecssmin
+# update revved img in CSS files. Depends on both css/img taks and replaced any 
+# img references by their revved img:
+#
+#    48c7c33.cheesecake.png 
+task 'usecssmin', 'update rev img in CSS files', (options, em) ->
 
   checksums = []
 
@@ -165,8 +176,6 @@ task 'usecssmin', 'update rev img in css files', (options, em) ->
               filename = parts[1..].join('.')
               em.emit 'log', "updating #{filename} with #{file}"
               body = body.replace new RegExp(filename, 'g'), file
-
-
 
             fs.writeFile style, body, (err) ->
               return error err if err

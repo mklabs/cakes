@@ -8,8 +8,10 @@ helper = require './tasks/util/helper'
 
 base = process.cwd()
 
-
 # ## CSS tasks
+#
+# These tasks are related to css optimizations, mainly concat, `@import` inlining
+# and minification (using [clean-css](https://github.com/GoalSmashers/clean-css#readme))
 
 # ### css.concat
 #

@@ -28,7 +28,8 @@
     "html-minifier": "0.4.x",
     "winston": "~0.5.5",
     "eyes": "~0.1.6",
-    "coffee-script": "1.1.2"
+    "coffee-script": "1.1.2",
+    "ronn": "~0.3.7"
   },
   "devDependencies": {
     "vows": "0.5.x"

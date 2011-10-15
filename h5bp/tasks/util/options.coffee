@@ -8,6 +8,8 @@ levels          = winston.config.cli.levels
 switches = [
   ['-l', '--loglevel [level]', 'What level of logs to report. Values → ' + Object.keys(levels).join(', ') + ' or silent'],
   ['-o', '--output [DIR]', 'directory for the createproject task']
+  ['-k', '--key [key]', 'Key configuration for config task']
+  ['-h', '--help [task]', 'Output documentation for the cake help task, generated from source']
 ]
 
 oparse = new optparse.OptionParser switches

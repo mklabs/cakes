@@ -7,9 +7,13 @@ helper = require './tasks/util/helper'
 
 base = process.cwd()
 
-# ## img optimization tasks
+# ## IMG tasks
+#
+# These tasks try to runoptipng on png files in `dir.img` and 
+# handle the  the revving of img filenames
+#
 
-# ### img.optimize
+# ### cake img.optimize
 # mainly done using optipng and  by spawning child process, so you'll need
 # optipng in yout PATH for this to work
 #
@@ -38,7 +42,7 @@ task 'img.optimize', 'Run optipng', (options, em) ->
         em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey, '\n\n'
         em.emit 'end'
 
-# ## img.ref
+# ### cake img.ref
 #
 # should we do this before, or after img.optimization?
 task 'img.rev', 'handle the automatic revving of image filenames', (options, em) ->
