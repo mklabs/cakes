@@ -4,7 +4,7 @@ path            = require 'path'
 {spawn, exec}   = require 'child_process'
 mkdirp          = require 'mkdirp'
 
-helper = require './helper'
+helper = require './tasks/util/helper'
 
 base = process.cwd()
 

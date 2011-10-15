@@ -3,8 +3,7 @@ fs              = require 'fs'
 path            = require 'path'
 {spawn, exec}   = require 'child_process'
 
-helper = require './helper'
-
+helper = require './tasks/util/helper'
 
 # ## jshint
 # run the `dir.js` folder through jshint with default options. Exits and reports in case of lint errors.

@@ -19,74 +19,26 @@
 # External dependencies.
 fs              = require 'fs'
 path            = require 'path'
-util            = require 'util'
-{spawn, exec}   = require 'child_process'
 {EventEmitter}  = require 'events'
 vm              = require 'vm'
 colors          = require 'colors'
 coffee          = require 'coffee-script'
-optparse        = require 'coffee-script/lib/optparse'
-winston         = require 'winston'
-eyes            = require 'eyes'
 config          = require './conf/default'
-helper          = require './helper'
-levels          = winston.config.cli.levels
+extend          = require('./tasks/util/helper').extend
 
-base = process.cwd()
-
-# options parsing, needs this to be able to parse command line arguments and used them outside of a cake task
+# options parsing, to be able to parse command line arguments and used them outside of a cake task
 # mainly for the loglevel options
-switches = [
-  ['-l', '--loglevel [level]', 'What level of logs to report. Values → ' + Object.keys(levels).join(', ') + ' or silent'],
-  ['-o', '--output [DIR]', 'directory for the createproject task']
-]
+options = require './tasks/util/options'
 
-oparse = new optparse.OptionParser switches
-options = oparse.parse process.argv.slice(2)
+# setup logger
+log = require('./tasks/util/log')(options)
 
-# still call option to make cake keep track of these options too
-option.apply this, opt for opt in switches
-
-if options.loglevel and options.loglevel isnt 'silent' and levels[options.loglevel] is undefined
-  throw new Error('Unrecognized loglevel option: ' + options.loglevel + ' \n instead of → ' + Object.keys(levels).join(', '))
-
-# Extend a source object with the properties of another object (shallow copy).
-extend = exports.extend = (object, properties) ->
-  for key, val of properties
-    object[key] = val
-  object
-
-
-# merge the local config with global object for this module, 
-# so that interpolation works as expected (of course, config should not redefine global variable)
+# merge the local config with global object for this module,
+# so that interpolation works as expected (todo: calrify configuration)
 extend global, config
 
 # the event emitter used along tasks to handle some asynchronous stuff, gem for global EventEmitter
 gem = new EventEmitter
-
-# setup logger
-log = new winston.Logger
-  transports: [
-    new winston.transports.Console({ level: options.loglevel || 'input' })
-  ]
-
-log.inspector = eyes.inspector
-  stream: null
-  styles:                 # Styles applied to stdout
-    all:     null,        # Overall style applied to everything
-    label:   'underline', # Inspection labels, like 'array' in `array: [1, 2, 3]`
-    other:   'inverted',  # Objects which don't have a literal representation, such as functions
-    key:     'grey',      # The keys in object literals, like 'a' in `{a: 1}`
-    special: 'grey',      # null, undefined...
-    number:  'blue',      # 0, 1, 2...
-    bool:    'magenta',   # true false
-    regexp:  'green'      # /\d+/
-
-log.inspect = (o) ->
-  result = log.inspector(o)
-  log.data line for line in result.split('\n')
-
-log.cli()
 
 # ### task monkey-patch
 #

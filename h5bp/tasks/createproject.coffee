@@ -1,10 +1,10 @@
 
-path            = require('path')
+path            = require 'path'
 {spawn, exec}   = require 'child_process'
-prompt          = require('prompt')
-mkdirp          = require('mkdirp')
+prompt          = require 'prompt'
+mkdirp          = require 'mkdirp'
 
-helper = require('./helper.coffee')
+helper = require './tasks/util/helper'
 
 base = process.cwd()
 

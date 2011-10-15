@@ -3,7 +3,7 @@ fs              = require 'fs'
 path            = require 'path'
 {spawn, exec}   = require 'child_process'
 
-helper = require './helper'
+helper = require './tasks/util/helper'
 
 base = process.cwd()
 
