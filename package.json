@@ -10,7 +10,7 @@
     "node": "> 0.4"
   },
   "scripts": {
-    "test": "vows h5bp/tests/*.js --spec"
+    "test": "vows h5bp/tests/basic.js --spec"
   },
   "config": {
     "port": 8080,
@@ -31,7 +31,7 @@
   "devDependencies": {
     "coffee-script": "1.1.2",
     "connect": "1.7.x",
-    "zombie": "0.10.1",
+    "zombie": "0.10.x",
     "vows": "0.5.x"
   }
 }
