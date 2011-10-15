@@ -8,8 +8,6 @@ helper = require('./helper.coffee')
 
 base = process.cwd()
 
-console.log base
-
 # ## configuration
 repo =
   h5bp: 'git://github.com/paulirish/html5-boilerplate.git'
