@@ -41,7 +41,7 @@ repo =
 
 task 'createproject', 'a simple create project task', (options, em) ->
 
-  src = path.join __dirname, '..', repo.h5bp.split('/').reverse()[0].replace(/\.git/, '')
+  src = path.join base, repo.h5bp.split('/').reverse()[0].replace(/\.git/, '')
 
   exists = path.existsSync src
 
@@ -67,7 +67,7 @@ task 'createproject', 'a simple create project task', (options, em) ->
     prompt.get ['directory'], (err, result) ->
       return error err if err
       return error new Error("please provide a directory name") unless result.directory
-      dest = path.join(__dirname, result.directory)
+      dest = path.join(base, result.directory)
       mkdirp dest, 0755, (err) ->
         return error err if err
         em.emit 'log', "  ✔  Created Directory: #{dest}"

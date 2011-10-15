@@ -10,7 +10,7 @@
     "node": "> 0.4"
   },
   "scripts": {
-    "pretest": "cd h5bp/ && cake -o _test createproject && cake build",
+    "pretest": "cd h5bp/ && cake -o _test createproject && cake -l silly build",
     "test": "vows h5bp/tests/basic.js --spec"
   },
   "config": {
