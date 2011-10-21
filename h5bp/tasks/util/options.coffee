@@ -22,4 +22,4 @@ if options.loglevel and options.loglevel isnt 'silent' and levels[options.loglev
   throw new Error('Unrecognized loglevel option: ' + options.loglevel + ' \n instead of → ' + Object.keys(levels).join(', '))
 
 # export parsed options from cli
-exports.options = options
+module.exports = options
