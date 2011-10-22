@@ -10,10 +10,11 @@ path            = require 'path'
 fs              = require 'fs'
 crypto          = require 'crypto'
 child           = require 'child_process'
+os              = require 'os'
 
 # ## fileset
 # expose filset module as helper method
-exports.fileset = require 'fileset'
+
 
 # ## extend
 # Extend a source object with the properties of another object (shallow copy).
@@ -71,6 +72,9 @@ exports.copy = (from, to, callback) ->
 
 
 exports.spawn = (cmd, args, callback) ->
+  # exec instead of spawn if on Win32
+  return child.exec cmd + ' ' + args.join(' '), callback if os.platform('Win32')
+
   stderr = []
   stdout = []
   ch = child.spawn(cmd, args)

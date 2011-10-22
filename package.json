@@ -19,7 +19,6 @@
     "root": "publish"
   },
   "dependencies": {
-    "fileset": "0.0.x",
     "colors": "0.5.x",
     "prompt": "0.1.x",
     "mkdirp": "0.0.6",

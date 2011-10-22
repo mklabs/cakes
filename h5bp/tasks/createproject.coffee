@@ -3,10 +3,13 @@ path            = require 'path'
 {spawn, exec}   = require 'child_process'
 prompt          = require 'prompt'
 mkdirp          = require 'mkdirp'
+os              = require 'os'
 
 helper = require './tasks/util/helper'
 
 base = process.cwd()
+
+win = os.platform is 'Win32'
 
 repo =
   h5bp: 'git://github.com/paulirish/html5-boilerplate.git'
@@ -49,7 +52,6 @@ task 'createproject', 'a simple create project task', (options, em) ->
 
   args = (if exists then 'pull origin master' else "clone #{repo.h5bp}").split(' ')
 
-  process.chdir src if exists
   helper.spawn 'git', args, (code, stdout, stderr) ->
     return error new Error('err') if code > 0
     stdout = stdout.replace(/\n/gm, '')
@@ -65,15 +67,30 @@ task 'createproject', 'a simple create project task', (options, em) ->
     prompt.get ['directory'], (err, result) ->
       return error err if err
       return error new Error("please provide a directory name") unless result.directory
-      dest = path.join(base, result.directory)
-      mkdirp dest, 0755, (err) ->
+      # dest = path.join(base, result.directory)
+      dest = path.join '..', result.directory
+      
+      
+      console.log 'before exec', src
+      exec "mkdir #{result.directory}", (err) ->
         return error err if err
         em.emit 'log', "  ✔  Created Directory: #{dest}"
-        exec ["cd #{src}", "cp -vr css js img build test *.html *.xml *.txt *.png *.ico .htaccess #{dest}"].join(' && '), (err, stdout, stderr) ->
+        
+        # issues on Win32 and xcopy with .htaccess where Win prompts for
+        # asking if .htaccess if a file or directory, will hang out the process
+        files = 'css js img build test *.html *.xml *.txt *.png *.ico'.split(' ')
+          .map (file) ->
+            destfile = path.join dest, file
+            return "xcopy #{file} #{destfile} /I /Y"
+          .join ' && '
+          
+        #files = "css js img build test *.html *.xml *.txt *.png *.ico .htaccess #{dest}"
+        
+        process.chdir src
+        exec files, (err, stdout, stderr) ->
           return error stderr if err
-          output = stdout.split(/\n/)
-
-          output.forEach (line) -> em.emit "    » #{line}", 'log'
+          output = stdout.split(if win then /\r\n/ else /\n/)
+          output.forEach (line) -> em.emit 'log', "    » #{line}"
           em.emit 'log', "  ✔  Created Project: #{dest}"
           process.chdir base
 
