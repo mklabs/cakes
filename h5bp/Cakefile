@@ -20,7 +20,6 @@ coffee          = require 'coffee-script'
 {extend}        = require './tasks/util/helper'
 config          = require './conf/default'
 
-
 # ### Options
 # Options are handled using coffeescript optparser,
 # You can define the option with short and long flags,
@@ -79,14 +78,17 @@ task = (name, description, action) ->
   description = description.grey
   _task name, description, (options) ->
     em = new EventEmitter()
-      # a local `EventEmitter` is created and passed in as a third parameter. Namely provides a few logging helpers:
+      # a local `EventEmitter` is created and passed in as a second parameter to tasks' functions.
+      #
+      # Namely provides a few logging helpers:
+      #
       #     em.emit 'log', 'Something to log'
       #     em.emit 'warn', 'Something to warn'
       #     em.emit 'error', 'Error to log, and exit program'
       #     em.emit 'data', {foo: 'bar'}
       #
       # The special `end` event allows tasks to run asynchronously and still be able to depends on each other. Once ended,
-      # a task notify its status to the global EventEmitter by emitting an `end:taskname` event.       
+      # a task notify its status to the global EventEmitter by emitting an `end:taskname` event.
       .on('error', (err) -> log.error 'error occured'.red.bold; error err)
       .on('warn', (err) -> log.warn err)
       .on('log', log.input.bind log, "#{name} » ".magenta)

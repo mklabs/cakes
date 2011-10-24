@@ -56,14 +56,18 @@ tasks <code>invoke()</code>-d them.</p>             </td>             <td class=
 
   <span class="nv">description = </span><span class="nx">description</span><span class="p">.</span><span class="nx">grey</span>
   <span class="nx">_task</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">description</span><span class="p">,</span> <span class="nf">(options) -&gt;</span>
-    <span class="nv">em = </span><span class="k">new</span> <span class="nx">EventEmitter</span><span class="p">()</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>a local <code>EventEmitter</code> is created and passed in as a third parameter. Namely provides a few logging helpers:
-    em.emit 'log', 'Something to log'
-    em.emit 'warn', 'Something to warn'
-    em.emit 'error', 'Error to log, and exit program'
-    em.emit 'data', {foo: 'bar'}</p>
+    <span class="nv">em = </span><span class="k">new</span> <span class="nx">EventEmitter</span><span class="p">()</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>a local <code>EventEmitter</code> is created and passed in as a second parameter to tasks' functions.</p>
+
+<p>Namely provides a few logging helpers:</p>
+
+<pre><code>em.emit 'log', 'Something to log'
+em.emit 'warn', 'Something to warn'
+em.emit 'error', 'Error to log, and exit program'
+em.emit 'data', {foo: 'bar'}
+</code></pre>
 
 <p>The special <code>end</code> event allows tasks to run asynchronously and still be able to depends on each other. Once ended,
-a task notify its status to the global EventEmitter by emitting an <code>end:taskname</code> event.       </p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="p">.</span><span class="kc">on</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nf">(err) -&gt;</span> <span class="nx">log</span><span class="p">.</span><span class="nx">error</span> <span class="s1">&#39;error occured&#39;</span><span class="p">.</span><span class="nx">red</span><span class="p">.</span><span class="nx">bold</span><span class="p">;</span> <span class="nx">error</span> <span class="nx">err</span><span class="p">)</span>
+a task notify its status to the global EventEmitter by emitting an <code>end:taskname</code> event.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="p">.</span><span class="kc">on</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nf">(err) -&gt;</span> <span class="nx">log</span><span class="p">.</span><span class="nx">error</span> <span class="s1">&#39;error occured&#39;</span><span class="p">.</span><span class="nx">red</span><span class="p">.</span><span class="nx">bold</span><span class="p">;</span> <span class="nx">error</span> <span class="nx">err</span><span class="p">)</span>
       <span class="p">.</span><span class="kc">on</span><span class="p">(</span><span class="s1">&#39;warn&#39;</span><span class="p">,</span> <span class="nf">(err) -&gt;</span> <span class="nx">log</span><span class="p">.</span><span class="nx">warn</span> <span class="nx">err</span><span class="p">)</span>
       <span class="p">.</span><span class="kc">on</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">,</span> <span class="nx">log</span><span class="p">.</span><span class="nx">input</span><span class="p">.</span><span class="nx">bind</span> <span class="nx">log</span><span class="p">,</span> <span class="s2">&quot;#{name} » &quot;</span><span class="p">.</span><span class="nx">magenta</span><span class="p">)</span>
       <span class="p">.</span><span class="kc">on</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="nx">log</span><span class="p">.</span><span class="nx">inspect</span><span class="p">.</span><span class="nx">bind</span> <span class="nx">log</span><span class="p">)</span>

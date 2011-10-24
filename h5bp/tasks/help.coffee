@@ -12,6 +12,17 @@ path            = require 'path'
 # markdown content is runned through ronnjs, then exeucted through the `man` executable.
 #
 
+manfront = [
+  "cake-:page(1) -- documentation for :page",
+  "==========================================================================================================",
+  "",
+  ""
+].join('\n')
+
+# the matcher used to parse content from source file
+matcher = /^\s*#\s?/
+
+
 # ### Usage
 #
 # Run `cake help` to display the default help message.
@@ -32,14 +43,6 @@ path            = require 'path'
 # Run `cake -h [unknown] help` where unkwown is anything but the valid task listed above. This will
 # display the generated man for the Cakefile.
 #
-
-manfront = [
-  "cake-:page(1) -- documentation for :page",
-  "==========================================================================================================",
-  "",
-  ""
-].join('\n')
-
 task 'help', 'Output documentation for the cake task (cake -h [task] help), generated from source', (options, em) ->
   target = options.help || 'help'
 
@@ -50,7 +53,7 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
     process.exit code
 
   # first, try to load from docs/cli
-  filepath = path.join(__dirname, '..', 'docs', 'cli', "#{target}.md")
+  filepath = path.join __dirname, '..', 'docs', 'cli', "#{target}.md"
   exists = path.existsSync filepath
   if exists
     return man fs.readFileSync(filepath, 'utf8'), target, options, cb
@@ -64,9 +67,10 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
     target = 'Cakefile'
 
   # otherwise, man the markdown from source file
-  man parse(fs.readFileSync(filepath, 'utf8')), target, options, (code) ->
+  man handleFront(parse(fs.readFileSync(filepath, 'utf8'))), target, options, (code) ->
     em.emit 'end'
     process.exit code
+
 
 handleFront = (input, page, options) ->
   front = manfront
@@ -75,7 +79,7 @@ handleFront = (input, page, options) ->
   front.replace(/:page/g, page) + input
 
 man = (output, target, options, callback) ->
-  ronn = new Ronn(handleFront(output, target, options))
+  ronn = new Ronn output
   # stdio: will break in latest version, was removed, private api.
   stdio = process.binding 'stdio'
   manpath = path.join __dirname, '.man.swp'
@@ -91,7 +95,6 @@ getTasks = () ->
     .filter((file) -> fs.statSync(path.join(__dirname, file)).isFile() && /\.coffee$/.test(file) )
     .map((file) -> '* ' + file.replace(/\.coffee$/, ''))
 
-matcher = /^\s*#\s?/
 parse = (code) ->
   lines    = code.split '\n'
   sections = []

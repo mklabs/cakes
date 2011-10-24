@@ -86,7 +86,7 @@ task 'css', 'Combines and minifies CSS', (options, em) ->
 # Performs img optimization
 task 'img', 'Performs img optimization', (options, em) ->
 
-  # img.rev depends on img.optimize, which runs optipng on img/*.png with 
+  # img.rev depends on img.optimize, which runs optipng on img/*.png with
   # standards options. img.rev handle the automatic revving of img
   # filenames.
   invoke 'img.rev'
@@ -114,7 +114,7 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
     =====================================================================
   """
 
-  em.emit 'log', message.split('\n').join('\n  ').grey
+  em.emit 'log', message.split('\n').join('\n  ')
   em.emit 'end', message.grey
 
 # ### cake check
@@ -127,7 +127,7 @@ task 'check', 'Performs few validations upon the current repo, outputing errors 
 
   return error new Error("#{base}/#{dir.source} does not exist, change the dir.source config or run cake createproject and enter #{dir.source} when prompted") unless exists
 
-# ### cake check
+# ### cake clean
 #
 # Wipe the previous build
 task 'clean', 'Wipe the previous build', (options, em) ->
@@ -141,10 +141,10 @@ task 'clean', 'Wipe the previous build', (options, em) ->
 
     em.emit 'end', stdout
 
-# ### mkdirs
-# Create the directory structure
+# ### cake mkdirs
 #
-# Copy the whole `dir.source` to `dir.intermediate`.
+# Create the directory structure and
+# copy the whole `dir.source` to `dir.intermediate`.
 #
 task 'mkdirs', 'Create the directory intermediate structure', (options, em) ->
 

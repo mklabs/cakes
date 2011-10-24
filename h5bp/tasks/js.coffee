@@ -10,7 +10,7 @@ base = process.cwd()
 
 # ## JS tasks
 # These tasks are related to JS optimizations, mainly concat, `@import`  and minification 
-# (using [clean-css](https://github.com/GoalSmashers/clean-css#readme))
+# (using [uglify-js](https://github.com/mishoo/UglifyJS#readme)
 
 # ### js.main.concat
 #
@@ -145,7 +145,7 @@ task 'js.scripts.concat', 'Concatenating library file with main script file', (o
   gem.on 'end:js.all.minify', em.emit.bind(em, 'end', scripts)
 
 
-# ### js.mylibs.concat
+# ### js.all.minify
 #
 # Minifies the scripts.js files in #{dir.intermediate}/#{dir.js}. depends on mkdirs
 #
