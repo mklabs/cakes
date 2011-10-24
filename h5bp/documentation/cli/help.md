@@ -43,3 +43,7 @@ The following are available as topics fallback and match one of the task in task
 The program used to view help content is man on Posix. Relatedly, one may want to view the
 docs in a browser instead.
 
+## SEE ALSO
+
+* cake -h cake help
+

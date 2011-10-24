@@ -11,6 +11,7 @@ base = process.cwd()
 repo =
   h5bp: 'git://github.com/paulirish/html5-boilerplate.git'
 
+# ## cake createproject 
 #
 # Generate a new project from your HTML5 Boilerplate repo clone
 #

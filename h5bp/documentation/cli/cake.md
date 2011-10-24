@@ -39,26 +39,15 @@ easily manage logging statements used during the overall build process.
 Log levels can be setup via cli options to only log messages with level
 higher than the supplied `loglevel` option.
 
-Available log levels are, from lowest to highest:
-
-* silly
-* input
-* verbose
-* prompt
-* info
-* data
-* help
-* warn
-* debug
-* error
-* and silent
+Available log levels are, from lowest to highest: silly, input, verbose,
+prompt, info, data, help, warn, debug, error and silent.
 
 The default loglevel is set to `input`. If you want a build to be run
 with a different log level, simply run the following:
 
     cake -l info <task> cake --loglevel silly <task>
 
-Log levels can be provided with the short (`-l`) or long (`loglevel`)
+Log levels can be provided with the short (`-l`) or long (`--loglevel`)
 option format.
 
 ## CONFIGURATION
@@ -67,7 +56,7 @@ It may evolve to something a bit different but the configuration is now
 managed using the `conf/default.coffee` file. It basically matches the
 default properties file of the h5bp ant build script.
 
-see `cake -h configuration help` for more informations.
+see `cake -h config help` for more informations.
 
 ## TASKS
 
@@ -139,9 +128,10 @@ to tasks' functions.
 
 Namely provides a few logging helpers:
 
-em.emit 'log', 'Something to log' em.emit 'warn', 'Something to warn'
-em.emit 'error', 'Error to log, and exit program' em.emit 'data', {foo:
-'bar'}
+    em.emit 'log', 'Something to log' 
+    em.emit 'warn', 'Something to warn'
+    em.emit 'error', 'Error to log, and exit program' 
+    em.emit 'data', {foo: 'bar'}
 
 Tasks in `tasks/` does not gain access to the logger instance, they
 could instead use the emitter to provide logs scopped to the current
@@ -184,12 +174,16 @@ basic test on the output folder. The test coverage should improve soon.
 
 ## SEE ALSO
 
+
+* cake help
+* cake -h config help
+* cake -h css help
+* cake -h intro help
+* cake -h js help
+
 * cake -h build help
 * cake -h createproject help
-* cake -h css help
 * cake -h docs help
-* cake -h help help
 * cake -h html help
 * cake -h img help
-* cake -h js help
 * cake -h test help

@@ -2,16 +2,16 @@
 {spawn, exec}   = require 'child_process'
 
 # ### cake docs
-# Generates the source documentation of this cake script
+# Generates the source docco documentation of this cake script.
 #
 # added as a conveniency
 task 'docs', 'Generates the source documentation of this cake script', (options, em) ->
 
   commands = [
-    "rm -rf documentation"
+    "rm -rf documentation/*.html"
     "cp Cakefile Cakefile.coffee"
     "docco conf/*.coffee *.coffee tasks/*.coffee tasks/*.js"
-    "cp -r docs documentation"
+    "cp -vr docs/*.html documentation"
     "rm -rf docs Cakefile.coffee"
   ].join(' && ')
 

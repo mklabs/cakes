@@ -53,7 +53,7 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
     process.exit code
 
   # first, try to load from docs/cli
-  filepath = path.join __dirname, '..', 'docs', 'cli', "#{target}.md"
+  filepath = path.join __dirname, '..', 'documentation', 'cli', "#{target}.md"
   exists = path.existsSync filepath
   if exists
     return man fs.readFileSync(filepath, 'utf8'), target, options, cb
@@ -67,7 +67,7 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
     target = 'Cakefile'
 
   # otherwise, man the markdown from source file
-  man handleFront(parse(fs.readFileSync(filepath, 'utf8'))), target, options, (code) ->
+  man handleFront(parse(fs.readFileSync(filepath, 'utf8')), target, options), (code) ->
     em.emit 'end'
     process.exit code
 
@@ -78,7 +78,7 @@ handleFront = (input, page, options) ->
     front += "### Warn: #{options.help} is not a valid task, viewing the index (generated from Cakefile )"
   front.replace(/:page/g, page) + input
 
-man = (output, target, options, callback) ->
+man = (output, callback) ->
   ronn = new Ronn output
   # stdio: will break in latest version, was removed, private api.
   stdio = process.binding 'stdio'
