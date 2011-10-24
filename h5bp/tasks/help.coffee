@@ -44,6 +44,17 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
   target = options.help || 'help'
 
   em.emit 'log', "Help #{target}"
+
+  # first, try to load from docs/cli
+  filepath = path.join(__dirname, '..', 'docs', 'cli', "#{target}.md")
+  console.log filepath
+  exists = path.existsSync filepath
+  if exists
+    return man parse(fs.readFileSync(filepath, 'utf8')), target, options, (code) ->
+      em.emit 'end'
+      process.exit code
+
+  # then try to load from actual source file
   filepath = path.join __dirname, "#{target}.coffee"
   exists = path.existsSync filepath
   if not exists
@@ -62,10 +73,12 @@ handleFront = (input, page, options) ->
 
 man = (output, target, options, callback) ->
   ronn = new Ronn(handleFront(output, target, options))
+  # stdio: will break in latest version, was removed, private api.
   stdio = process.binding 'stdio'
   manpath = path.join __dirname, '.man.swp'
   fs.writeFileSync manpath, ronn.roff()
   ch = spawn 'man', [manpath],
+    # customFds soon deprecated
     customFds: [stdio.stdinFD, stdio.stdoutFD, stdio.stderrFD]
 
   ch.on 'exit', callback
