@@ -69,7 +69,7 @@ task 'createproject', 'a simple create project task', (options, em) ->
       mkdirp dest, 0755, (err) ->
         return error err if err
         em.emit 'log', "  ✔  Created Directory: #{dest}"
-        exec ["cd #{src}", "cp -vr css js img build test *.html *.xml *.txt *.png *.ico .htaccess #{dest}"].join(' && '), (err, stdout, stderr) ->
+        exec ["cd #{src}", "cp -vr css js img build *.html *.xml *.txt *.png *.ico .htaccess #{dest}"].join(' && '), (err, stdout, stderr) ->
           return error stderr if err
           output = stdout.split(/\n/)
 
