@@ -45,22 +45,25 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
 
   em.emit 'log', "Help #{target}"
 
+  cb = (code) ->
+    em.emit 'end'
+    process.exit code
+
   # first, try to load from docs/cli
   filepath = path.join(__dirname, '..', 'docs', 'cli', "#{target}.md")
-  console.log filepath
   exists = path.existsSync filepath
   if exists
-    return man parse(fs.readFileSync(filepath, 'utf8')), target, options, (code) ->
-      em.emit 'end'
-      process.exit code
+    return man fs.readFileSync(filepath, 'utf8'), target, options, cb
 
   # then try to load from actual source file
   filepath = path.join __dirname, "#{target}.coffee"
   exists = path.existsSync filepath
   if not exists
+    # if not a valid task file, fallback to Cakefile
     filepath = path.join __dirname, '../Cakefile'
     target = 'Cakefile'
 
+  # otherwise, man the markdown from source file
   man parse(fs.readFileSync(filepath, 'utf8')), target, options, (code) ->
     em.emit 'end'
     process.exit code
