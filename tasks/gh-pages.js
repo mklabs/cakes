@@ -42,13 +42,17 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
 
   gem.on('end:gh-pages.init', function(data) {
 
-    console.log(data);
     var commands = [
-      'git symbolic-ref HEAD refs/heads/gh-pages'
+      'git symbolic-ref HEAD refs/heads/gh-pages',
+      'rm .git/index',
+      'git clean -fdx',
+      'echo ' + index(data) + ' > index.html',
+      'git add .',
+      'git commit -a -m "First pages commit"'
     ].join('&&');
 
     exec(commands, function(err, stdout) {
-      if(err) return em.emit('warn', err);
+      if(err) return em.emit('error', err);
       em.emit('log', 'Done.');
       em.emit('silly', stdout);
       em.emit('end');
@@ -60,25 +64,9 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
 
 });
 
-task('gh-pages.blank', function(options, em) {
-
-  var commands = [
-    'git symbolic-ref HEAD refs/heads/gh-pages',
-    'rm .git/index',
-    'git clean -fdx',
-    'echo "My GitHub Page" > index.html',
-    'git add .',
-    'git commit -a -m "First pages commit"'
-    // 'git push origin gh-pages'
-  ].join('&&');
-
-  exec(commands, function(err, stdout) {
-    if(err) return em.emit('error', err);
-    em.emit('log', 'Done.');
-    em.emit('silly', stdout);
-    em.emit('end');
-  });
-});
+function index() {
+  return 'My GitHub page';
+}
 
 
 //
