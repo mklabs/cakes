@@ -1,7 +1,9 @@
 
 var exec = require('child_process').exec,
 path = require('path'),
-fs = require('fs');
+fs = require('fs'),
+musctache = require('mustache'),
+template = fs.readFileSync(path.join(__dirname, 'ghpages', 'index.html'), 'utf8');
 
 task('gh-pages.init', 'Create configuration file', function(options, em) {
 
@@ -64,8 +66,8 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
 
 });
 
-function index() {
-  return 'My GitHub page';
+function index(options) {
+  return mustache.to_html(template, options, {});
 }
 
 
