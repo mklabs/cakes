@@ -47,10 +47,7 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
     var commands = [
       'git symbolic-ref HEAD refs/heads/gh-pages',
       'rm .git/index',
-      'git clean -fdx',
-      // 'echo ' + index(data) + ' > index.html',
-      // 'git add .',
-      // 'git commit -a -m "First pages commit"'
+      'git clean -fdx'
     ].join('&&');
 
     exec(commands, function(err, stdout) {
@@ -62,8 +59,9 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
 
         em.emit('log', 'Done.');
 
-        exec(['git add . && git commit -a -m "Pages commit"'], function(err) {
-          if(err) return em.emit('error', err);
+        exec(['git add . && git commit -a -m "Pages commit"'], function(err, stdout) {
+          if(err && err.code === 1) em.emit('warn', stdout);
+          else if (err) return em.emit('error', err);
 
           em.emit('end');
         });
