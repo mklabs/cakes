@@ -3,7 +3,7 @@ var exec = require('child_process').exec,
 path = require('path'),
 fs = require('fs');
 
-task('init:gh-pages', 'Create configuration file', function(options, em) {
+task('gh-pages.init', 'Create configuration file', function(options, em) {
 
   var defaults = {
     readme: 'README'
@@ -33,12 +33,34 @@ task('init:gh-pages', 'Create configuration file', function(options, em) {
 
   em.emit('data', pkg);
 
-
+  em.emit('end', pkg);
 });
 
 
 task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
   em.emit('log', 'Setting up a gh-pages branch');
+
+  gem.on('end:gh-pages.init', function(data) {
+
+    console.log(data);
+    var commands = [
+      'git checkout gh-pages'
+    ].join('&&');
+
+    exec(commands, function(err, stdout) {
+      if(err) return em.emit('warn', err);
+      em.emit('log', 'Done.');
+      em.emit('silly', stdout);
+      em.emit('end');
+    });
+
+  });
+
+  invoke('gh-pages.init');
+
+});
+
+task('gh-pages.blank', function(options, em) {
 
   var commands = [
     'git symbolic-ref HEAD refs/heads/gh-pages',
