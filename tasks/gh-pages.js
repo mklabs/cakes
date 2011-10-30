@@ -44,7 +44,7 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
 
     console.log(data);
     var commands = [
-      'git checkout gh-pages'
+      'git symbolic-ref HEAD refs/heads/gh-pages'
     ].join('&&');
 
     exec(commands, function(err, stdout) {
