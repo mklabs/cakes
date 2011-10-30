@@ -2,7 +2,7 @@
 var exec = require('child_process').exec,
 path = require('path'),
 fs = require('fs'),
-musctache = require('mustache'),
+mustache = require('mustache'),
 template = fs.readFileSync(path.join(__dirname, 'ghpages', 'index.html'), 'utf8');
 
 task('gh-pages.init', 'Create configuration file', function(options, em) {
@@ -48,16 +48,28 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
       'git symbolic-ref HEAD refs/heads/gh-pages',
       'rm .git/index',
       'git clean -fdx',
-      'echo ' + index(data) + ' > index.html',
-      'git add .',
-      'git commit -a -m "First pages commit"'
+      // 'echo ' + index(data) + ' > index.html',
+      // 'git add .',
+      // 'git commit -a -m "First pages commit"'
     ].join('&&');
 
     exec(commands, function(err, stdout) {
       if(err) return em.emit('error', err);
-      em.emit('log', 'Done.');
+
       em.emit('silly', stdout);
-      em.emit('end');
+      fs.writeFile('./index.html', index(data), function(err) {
+        if(err) return em.emit('error', err);
+
+        em.emit('log', 'Done.');
+
+        exec(['git add . && git commit -a -m "Pages commit"'], function(err) {
+          if(err) return em.emit('error', err);
+
+          em.emit('end');
+        });
+
+      });
+
     });
 
   });
