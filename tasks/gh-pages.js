@@ -41,7 +41,7 @@ task('gh-pages', 'Set up a gh-pages branch.', function(options, em) {
   em.emit('log', 'Setting up a gh-pages branch');
 
   var commands = [
-    'git symbloic-ref HEAD refs/heads/gh-pages',
+    'git symbolic-ref HEAD refs/heads/gh-pages',
     'rm .git/index',
     'git clean -fdx',
     'echo "My GitHub Page" > index.html',
