@@ -4,12 +4,14 @@ path            = require 'path'
 prompt          = require 'prompt'
 mkdirp          = require 'mkdirp'
 
-helper = require './tasks/util/helper'
+helper = require './util/helper'
+error = helper.error
 
 base = process.cwd()
 
 repo =
-  h5bp: 'git://github.com/paulirish/html5-boilerplate.git'
+  # use http here, better support with corp proxies...
+  h5bp: 'git://github.com/h5bp/html5-boilerplate.git'
 
 # ## cake createproject 
 #

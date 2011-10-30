@@ -4,7 +4,7 @@ path            = require 'path'
 {spawn, exec}   = require 'child_process'
 mkdirp          = require 'mkdirp'
 
-helper = require './tasks/util/helper'
+helper = require './util/helper'
 
 base = process.cwd()
 
@@ -43,7 +43,6 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
 
       em.emit 'log', 'minify html before copy...'
       invoke 'htmlclean'
-      # gem.emit 'end:htmlclean'
 
 
   gem.on 'end:js', handle()
@@ -60,7 +59,7 @@ task 'build', 'Build with defaults configuration the main tasks: js, css and img
     ].join(' && ')
 
     exec commands, (err, stdout, stderr) ->
-      return error err if err
+      return em.emit 'error', err if err
       elapsed = (+new Date - start) / 1000
       em.emit 'log', "✔ Build Script successful (#{elapsed}s). Check your #{dir.publish}/ folder"
       em.emit 'end'
@@ -115,7 +114,7 @@ task 'intro', 'Kindly inform the developer about the impending magic', (options,
   """
 
   em.emit 'log', message.split('\n').join('\n  ')
-  em.emit 'end', message.grey
+  em.emit 'end', message
 
 # ### cake check
 #
@@ -125,7 +124,7 @@ task 'check', 'Performs few validations upon the current repo, outputing errors 
   # Test whether or not the dir.source path exists.
   exists = path.existsSync "#{base}/#{dir.source}"
 
-  return error new Error("#{base}/#{dir.source} does not exist, change the dir.source config or run cake createproject and enter #{dir.source} when prompted") unless exists
+  return em.emit 'error', err new Error("#{base}/#{dir.source} does not exist, change the dir.source config or run cake createproject and enter #{dir.source} when prompted") unless exists
 
 # ### cake clean
 #
@@ -137,9 +136,8 @@ task 'clean', 'Wipe the previous build', (options, em) ->
   em.emit 'log', 'Cleaning up previous build directory...'.grey
 
   exec "rm -rf #{dir.intermediate} #{dir.publish}", (err, stdout, stderr) ->
-    return error err if err
-
-    em.emit 'end', stdout
+    return em.emit 'error', err if err
+    em.emit 'end'
 
 # ### cake mkdirs
 #
@@ -153,26 +151,29 @@ task 'mkdirs', 'Create the directory intermediate structure', (options, em) ->
   gem.on 'end:clean', ->
     failmsg = "Your dir.publish folder is set to #{dir.publish} which could delete your entire site or worse. Change it in project.properties"
     dangerousPath = !!~['..', '.', '/', './', '../'].indexOf(dir.publish)
-    return error new Error(failmsg) if dangerousPath
+    return em.emit 'error', new Error(failmsg) if dangerousPath
 
     process.chdir path.join(base, "#{dir.source}")
     helper.fileset(".", [file.default.exclude, file.exclude].join(' '))
       .on('error', console.error.bind(console))
       .on('end', (files) ->
-        em.emit 'log', "Copying #{files.length} files over to #{dir.intermediate} and #{dir.publish} from #{dir.source}".grey
+        em.emit 'log', "Copying #{files.length} files over to #{dir.intermediate} from #{dir.source}"
+
+        # swicth back to original working directory
+        process.chdir path.join(base)
         destinations = [dir.intermediate]
         remaining = files.length * destinations.length
         for to in destinations then do (to) ->
+          to = path.resolve to
           for file in files then do(file) ->
-            fragment = file.split '/'
-            dirname = '/' + file.split('/')[1..-2].join('/')
-            dirname = dirname.replace(dirname.split(base)[1].split('/')[1..][0], to)
-            filename = file.split('/')[-1..][0]
+            filename = path.basename file
+            dirname = path.dirname file
+            dirname = path.join(to, dirname.replace(path.resolve(dir.source), ''))
 
             mkdirp dirname, 0755, (err) ->
-              return error err if err
-              to = path.join(dirname, filename)
-              exec "cp -v #{file} #{to}", (err, stdout, stderr) ->
-                return error err if err
+              return em.emit 'error', err if err
+              exec "cp -v '#{file}' #{dirname}", (err, stdout, stderr) ->
+                return em.emit 'error', err if err
+                em.emit 'silly', stdout.replace(new RegExp(base, 'g'), '').replace(/\n/g, '')
                 em.emit 'end', 'done' if --remaining is 0
       )

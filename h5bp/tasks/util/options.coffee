@@ -7,9 +7,11 @@ levels          = winston.config.cli.levels
 # mainly for the loglevel options
 switches = [
   ['-l', '--loglevel [level]', 'What level of logs to report. Values → ' + Object.keys(levels).join(', ') + ' or silent'],
-  ['-o', '--output [DIR]', 'directory for the createproject task']
+  ['-o', '--output [dir]', 'directory for the createproject task']
   ['-k', '--key [key]', 'Key configuration for config task']
   ['-h', '--help [task]', 'Output documentation for the cake help task, generated from source']
+  ['-d', '--dirname [dir]', 'directory from which the Cakefile is meant to run (mainly usefull for the bin usage)']
+  ['-s', '--source [dir]', 'project directory, defaults to current directory']
 ]
 
 oparse = new optparse.OptionParser switches

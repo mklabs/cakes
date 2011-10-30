@@ -7,11 +7,14 @@
     "url": ""
   },
   "engines": {
-    "node": "> 0.4"
+    "node": "0.4"
   },
   "scripts": {
-    "pretest": "cd h5bp/ && cake -o _test createproject && cake -l silly build",
-    "test": "vows h5bp/tests/basic.js --spec"
+    "pretest": "cd h5bp && cake -o _test createproject && cake -l silly -s _test build",
+    "test": "cd h5bp && vows tests/basic.js --spec"
+  },
+  "directories": {
+    "bin": "./bin"
   },
   "config": {
     "port": 8080,

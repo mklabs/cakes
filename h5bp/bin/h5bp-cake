@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+var path = require('path');
+
+if(process.argv.slice(2).length) {
+  // handle no task case, make sure to output the cake help.
+  process.argv.splice(2, 0, '--dirname', process.cwd());
+}
+
+// only allow cli use and build process when a local `.h5bprc` file exist
+// This prevents unwanted build trigger on the current working directory.
+if(!~['help', 'init'].indexOf(process.argv.slice(-1)[0]) && !path.existsSync(path.join(process.cwd(), '.h5bprc'))) {
+  throw new Error('Cli usage requires a local .h5bprc file. Type h5bp-cake init to create one.');
+}
+
+process.chdir(path.join(__dirname, '..'));
+require('coffee-script/lib/cake').run();
+

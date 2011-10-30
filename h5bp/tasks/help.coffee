@@ -56,7 +56,7 @@ task 'help', 'Output documentation for the cake task (cake -h [task] help), gene
   filepath = path.join __dirname, '..', 'documentation', 'cli', "#{target}.md"
   exists = path.existsSync filepath
   if exists
-    return man fs.readFileSync(filepath, 'utf8'), target, options, cb
+    return man fs.readFileSync(filepath, 'utf8'), cb
 
   # then try to load from actual source file
   filepath = path.join __dirname, "#{target}.coffee"

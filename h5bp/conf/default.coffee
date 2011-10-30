@@ -1,13 +1,14 @@
 #
 # Default Build Settings
-# you can override these settings on a project basis in a project.properties file
-# so probably best not to touch these as they could be overwritten in later versions!
+#
+# This file is a close port to the build/config/default.properties file
+# for the ant build script. Some configuration properties (tools, ...)
+# are not used in the cake script and probably won't be, some others are
+# not used while they should be. This needs clarification.
 #
 
-
-#
-# Directory Paths
-#
+# bunch of messy obj namespace definition
+# todo: change this, quite ugly now.
 dir = exports.dir = {}; file = exports.file = {}; build = exports.build = {}; tool = exports.tool = {}; scripts = exports.script = {}; images = exports.images = {}; hash = exports.hash = {}
 file.pages = {}; file.pages.default = {}; file.default = {}; file.root = {}; file.default.js = {}
 build.concat = {}; build.version = {}; build.scripts = {}
@@ -15,7 +16,10 @@ scripts.compilation = {}
 images.strip = {}
 
 
-dir.source          = "_test"
+#
+# Directory Paths
+#
+dir.source          = "."
 dir.intermediate    = "intermediate"
 dir.publish         = "publish"
 dir.build           = "build"
@@ -33,7 +37,7 @@ dir.images          = "img"
 #
 # HTML, PHP, etc files to clean and update script/css references
 #
-file.pages.default.include  = "index.html, 404.html"
+file.pages.default.include  = "index.html, 404.html, docs/**.html"
 
 # You will need to include the property file.pages.include in your project.properties file
 # and add any extra pages you want to be updated by the scripts in a comma separated list
@@ -63,7 +67,7 @@ file.default.js.bypass = ""
 # Root Script file
 # this is the file that will be swapped for the concatenated and minified javascript.
 #
-file.root.script    = "script.js"
+file.root.script    = "script.js docs.js"
 
 #
 # Root Stylesheet

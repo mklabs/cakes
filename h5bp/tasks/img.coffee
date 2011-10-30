@@ -3,7 +3,7 @@ fs              = require 'fs'
 path            = require 'path'
 {spawn, exec}   = require 'child_process'
 
-helper = require './tasks/util/helper'
+helper = require './util/helper'
 
 base = process.cwd()
 
@@ -35,12 +35,15 @@ task 'img.optimize', 'Run optipng', (options, em) ->
       # prevent optipng from returning with error if no files to process
       return em.emit 'end' unless files.length
 
+      remaining = files.length
       # run optipng with default options (make this configurable)
-      exec "optipng #{base}/#{dir.intermediate}/#{dir.images}/*.png", (err, stdout, stderr) ->
-        return error new Error( (stderr || stdout).trim().split('\n').join('\n  » ') ) if err
-
-        em.emit 'log', '\n  » ' + stdout.trim().split('\n').join('\n  » ').grey, '\n\n'
-        em.emit 'end'
+      for file in files then do (file) ->
+        exec "optipng " + file, (err, stdout, stderr) ->
+          if err
+            --remaining
+            return em.emit 'warn', new Error( (stderr || stdout).trim().split('\n').join('\n  » ') )
+          em.emit 'log', '\n  » ' + stdout
+          em.emit 'end' if --remaining is 0
 
 # ### cake img.ref
 #

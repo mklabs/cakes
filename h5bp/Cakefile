@@ -14,10 +14,7 @@
 fs              = require 'fs'
 path            = require 'path'
 {EventEmitter}  = require 'events'
-vm              = require 'vm'
 colors          = require 'colors'
-coffee          = require 'coffee-script'
-{extend}        = require './tasks/util/helper'
 config          = require './conf/default'
 
 # ### Options
@@ -27,40 +24,37 @@ config          = require './conf/default'
 
 options = require './tasks/util/options'
 
+# helpers
+{extend, load, error} = require './tasks/util/helper'
+
+# change working directory if dirname is defined (mainly usefull for the bin usage)
+process.chdir options.dirname if options.dirname
+
 # ### Logger
-# Logs are handled via winston with cli mode and a default level set to 
+# Logs are handled via winston with cli mode and a default level set to
 # input. The log level is set by the `-l` or `--loglevel` cli options:
 #
-# * silly
-# * input
-# * verbose
-# * prompt
-# * info
-# * data
-# * help
-# * warn
-# * debug
-# * error
+#     silly, input, verbose, prompt, info, data, help, warn, debug, error
 #
 log = require('./tasks/util/log')(options)
 
-# ### error() handler
-#
-#     return error err if err
-#     return error new Error(':((') if err
-error = (err) ->
-  log.error '  ✗ '.red + (err.message || err).red
-  process.exit 1
+# ### config
+# merge the local config with global object for this module, so that
+# interpolation works as expected (todo: clarify configuration)
+h5bprc = path.join process.cwd(), '.h5bprc'
+if path.existsSync(h5bprc)
+  config = JSON.parse fs.readFileSync(h5bprc, 'utf8')
 
-# ### config 
-# merge the local config with global object for this module, so that interpolation works as expected (todo: calrify configuration)
+# some cli options overrides
+config.dir.source = options.source if options.source
+
 extend global, config
 
 # ### gem
 # the event emitter used along tasks to handle some asynchronous stuff, gem for global EventEmitter. Basically,
-# this is the main mediator that tasks listen to `end:` events to know wheter thay can be executed. Each tasks to 
+# this is the main mediator that tasks listen to `end:` events to know wheter thay can be executed. Each tasks to
 # notify that their async work is done simply emit an `end` event on the local EventEmitter of the task (third argument).
-gem = new EventEmitter
+global.gem = gem = new EventEmitter
 
 # ### task monkey-patch
 #
@@ -73,7 +67,7 @@ _task = global.task
 # tasks `invoke()`-d them.
 _tasks = {}
 
-task = (name, description, action) ->
+global.task = task = (name, description, action) ->
 
   description = description.grey
   _task name, description, (options) ->
@@ -91,11 +85,12 @@ task = (name, description, action) ->
       # a task notify its status to the global EventEmitter by emitting an `end:taskname` event.
       .on('error', (err) -> log.error 'error occured'.red.bold; error err)
       .on('warn', (err) -> log.warn err)
+      .on('silly', log.silly.bind log, "#{name} » ".magenta)
       .on('log', log.input.bind log, "#{name} » ".magenta)
       .on('data', log.inspect.bind log)
       .on('end', (results) ->
         log.info  "✔ end:#{name}".green
-        log.silly log.inspector(results)
+        log.silly log.inspector(results) if results
         gem.emit "end:#{name}", results
         _tasks[name] = 'done'
       )
@@ -125,24 +120,21 @@ task = (name, description, action) ->
 # and JS files to be used to create or maintain cake tasks.
 fs.readdirSync(path.join(__dirname, 'tasks'))
   .filter((file) -> fs.statSync(path.join(__dirname, 'tasks', file)).isFile() && !/^\./.test(file) )
-  .forEach (file) ->
-    script = fs.readFileSync path.join(__dirname, 'tasks', file), 'utf8'
-    # tasks may be written in pure JS or coffee. Take care of coffee compile if needed.
-    script = if /\.coffee$/.test(file) then coffee.compile script else script
-    # merge the globals for console, process etc
-    context = extend {}, global
-    # and setup a few local variable to be available in context
-    extend context, 
-      task: task
-      require: require
-      error: error
-      gem: gem
-      __filename: path.join __dirname, 'tasks', file
-      __dirname: path.dirname path.join(__dirname, 'tasks', file)
+  .forEach (load(__dirname, log))
 
-    log.silly "Import #{file}"
-    vm.runInNewContext script, context, file
 
+# ### Plugins
+#
+# This is a first attempt of a (simple) plugin system. Basically, the idea is
+# that the build script provides a set of tasks from which you can tweak your
+# own build process. The build script may be seen as a backbone, one could
+# probably override specific part of the build script (js, css, intro, etc.).
+# Tasks just have to emit the `end` event accordingly, and do w/e they want.
+plugins = path.resolve(path.join options.dirname, 'tasks')
+if plugins isnt path.join(__dirname, 'tasks') and path.existsSync plugins
+  fs.readdirSync(path.join(options.dirname, 'tasks'))
+    .filter((file) -> fs.statSync(path.join(options.dirname, 'tasks', file)).isFile() && !/^\./.test(file) )
+    .forEach (load(options.dirname, log))
 
 # ### cake config
 # Show configuration for key
@@ -155,6 +147,17 @@ task 'config', 'Show configuration for key', (options, em) ->
   conf = config[options.key]
   em.emit 'warn', "No #{options.key} in config".yellow.bold if not conf
   em.emit 'data', conf or config
+
+# ### cake init
+#
+# A simple task to create basic configuration file
+#
+task 'init', 'Create a basic configuration file', (options, em) ->
+  # ideally, main props will get prompted along the way
+  em.emit 'data', config
+  output = JSON.stringify config, null, 2
+  fs.writeFileSync path.join(process.cwd(), '.h5bprc'), output
+  em.emit 'end'
 
 # ### manifest
 # not (yet) implemented.

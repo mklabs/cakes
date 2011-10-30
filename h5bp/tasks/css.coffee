@@ -4,7 +4,7 @@ path            = require 'path'
 {spawn, exec}   = require 'child_process'
 cssmin          = require 'clean-css'
 
-helper = require './tasks/util/helper'
+helper = require './util/helper'
 
 base = process.cwd()
 
@@ -38,15 +38,16 @@ task 'css.concat', 'Concat the CSS files depending on the @imports in your file.
 
     # replace imports with h5bp-import tags (part 1) this one wraps @media types
     file = fs.readFile path.join(base, to), 'utf8', (err, body) ->
+      return em.emit 'error', err if err
 
       # go sync during the process of replace to ease the process
       body = body.replace /@import url\([^\)]+\)/gi, (match) ->
         file = match.match(/@import url\(([^\)]+)\)/)?[1].replace(/['|"]/g, '')
-        filepath = path.join base, dir.intermediate, dir.css, file
+        filepath = path.join base, dir.intermediate, dir.css, file.trim()
 
         # test if the url property is valid and match an actual file in the repo
         ok = path.existsSync filepath
-        return error new Error("@import-ed #{filepath} does not exist") unless ok
+        return em.emit 'error', new Error("@import-ed #{filepath} does not exist") unless ok
 
         em.emit 'log', "replacing #{match} with #{file} content"
         return "/* h5bp-import --> #{file} */\n" + fs.readFileSync filepath, 'utf8'
@@ -70,6 +71,6 @@ task 'css.concat', 'Concat the CSS files depending on the @imports in your file.
 
       em.emit 'log', "Write the min css file to #{to}"
       fs.writeFile to, body, (err) ->
-        return error err if err
+        return em.emit 'error', err if err
         em.emit 'end', style
 

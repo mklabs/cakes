@@ -3,17 +3,17 @@ fs              = require 'fs'
 path            = require 'path'
 {spawn, exec}   = require 'child_process'
 
-helper = require './tasks/util/helper'
+helper = require './util/helper'
 
 # ## jshint
 # run the `dir.js` folder through jshint with default options. Exits and reports in case of lint errors.
 #
 # Run separately
 task 'jshint', 'jshint task, run jshint on any non min.js file in dir.js', (options, em) ->
-  helper.fileset "#{dir.source}/#{dir.js}/", "**/*.min.js #{dir.source}/#{dir.js.libs}", (err, files) ->
+  helper.fileset "#{dir.source}/#{dir.js.main}/", "**/*.min.js #{dir.source}/#{dir.js.libs}", (err, files) ->
     return error err if err
     exec 'jshint ' + files.join(' '), (err, stdout) -> 
-      return em.emit 'log', '  ✔ Congrats! Lint Free!'.green unless err
+      return em.emit 'log', '  ✔ Congrats! Lint Free!' unless err
 
       if err.message is 'Command failed: '
         em.emit 'warn', [

@@ -4,7 +4,7 @@ path            = require 'path'
 {spawn, exec}   = require 'child_process'
 htmlmin         = require 'html-minifier'
 
-helper = require './tasks/util/helper'
+helper = require './util/helper'
 
 base = process.cwd()
 
@@ -88,6 +88,7 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
           fs.readFile page, 'utf8', (err, body) ->
             return error err if err
 
+
             # * switch from a regular jquery to minified
             em.emit 'log', 'switch from a regular jquery to minified'
             body = body.replace /jquery-(\d|\d(\.\d)+)\.js/g, (file, version) ->
@@ -110,8 +111,8 @@ task 'usemin', 'Replaces references to non-minified scripts/styles', (options, e
 
             # Update the HTML to reference our concatenated script file.
             em.emit 'log', "Update the HTML to reference our concatenated script file: #{scripts.js}"
-            body = body.replace /<!-- scripts concatenated[\d\w\s\W]*<!-- end scripts -->/gm, ->
-              return "<script defer src=\"#{dir.js}/#{scripts.js}\"></script>"
+            body = body.replace /<!--\s*scripts concatenated[\d\w\s\W\n]*<!--\s*end scripts\s*-->/gm, ->
+              return "<script defer src=\"/#{dir.js.main}/#{scripts.js}\"></script>"
 
             # Update the HTML with the new css filenames.
             em.emit 'log', "Update the HTML with the new css filenames: #{style.css}"
