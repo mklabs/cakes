@@ -110,6 +110,30 @@ global.task = task = (name, description, action) ->
     action.call @, options, em unless state
 
 
+# ### cake config
+# Show configuration for key
+#
+#     cake config
+#     cake --k dir config
+#     cake --key paths config
+#
+task 'config', 'Show configuration for key', (options, em) ->
+  conf = config[options.key]
+  em.emit 'warn', "No #{options.key} in config".yellow.bold if not conf
+  em.emit 'data', conf or config
+
+# ### cake init
+#
+# A simple task to create basic configuration file
+#
+task 'init', 'Create a basic configuration file', (options, em) ->
+  # ideally, main props will get prompted along the way
+  em.emit 'data', config
+  output = JSON.stringify config, null, 2
+  fs.writeFileSync path.join(process.cwd(), '.h5bprc'), output
+  em.emit 'end'
+
+
 #
 # ### Autoload tasks in tasks/
 #
@@ -136,28 +160,6 @@ if plugins isnt path.join(__dirname, 'tasks') and path.existsSync plugins
     .filter((file) -> fs.statSync(path.join(options.dirname, 'tasks', file)).isFile() && !/^\./.test(file) )
     .forEach (load(options.dirname, log))
 
-# ### cake config
-# Show configuration for key
-#
-#     cake config
-#     cake --k dir config
-#     cake --key paths config
-#
-task 'config', 'Show configuration for key', (options, em) ->
-  conf = config[options.key]
-  em.emit 'warn', "No #{options.key} in config".yellow.bold if not conf
-  em.emit 'data', conf or config
-
-# ### cake init
-#
-# A simple task to create basic configuration file
-#
-task 'init', 'Create a basic configuration file', (options, em) ->
-  # ideally, main props will get prompted along the way
-  em.emit 'data', config
-  output = JSON.stringify config, null, 2
-  fs.writeFileSync path.join(process.cwd(), '.h5bprc'), output
-  em.emit 'end'
 
 # ### manifest
 # not (yet) implemented.

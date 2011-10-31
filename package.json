@@ -14,7 +14,7 @@
     "test": "cd h5bp && vows tests/basic.js --spec"
   },
   "directories": {
-    "bin": "./bin"
+    "bin": "./h5bp/bin"
   },
   "config": {
     "port": 8080,
